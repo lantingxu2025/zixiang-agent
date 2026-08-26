@@ -65,6 +65,9 @@ pub struct CharacterVisual {
     pub radical: String,
     /// 字形描述，说明结构特点和各部件的空间位置关系
     pub visual_description: String,
+    /// 部首对应的视觉元素（由知识库 character_db 查表填充）
+    #[serde(default)]
+    pub visual_elements: Vec<String>,
 }
 
 /// 姓名中所有汉字的视觉信息集合

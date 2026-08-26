@@ -1,18 +1,20 @@
 //! 姓名（汉字）分析工具
 //!
-//! 调用 GLM-5.2 分析姓名中每个汉字的笔画序列、结构类型、部件组成、
+//! 调用文本模型分析姓名中每个汉字的笔画序列、结构类型、部件组成、
 //! 部首与字形描述，用于后续以汉字笔画拼凑人脸。
+//!
+//! 支持任意 OpenAI 兼容的第三方服务商（API2D、OpenRouter 等），
+//! 通过 [`ApiProvider`](crate::config::ApiProvider) 配置。
 
 use anyhow::{anyhow, bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, warn};
 
+use crate::config::ApiProvider;
 use crate::types::CharacterVisual;
 
-/// 智谱 AI 对话 API 地址
-const API_URL: &str = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
-/// 使用的文本模型
-const MODEL: &str = "glm-5.2";
+/// 默认文本模型（standalone 入口使用）
+const DEFAULT_MODEL: &str = "gpt-4o-mini";
 
 // ---------------------------------------------------------------------------
 // 请求 / 响应结构体
@@ -173,25 +175,25 @@ fn parse_character_visual(chat_resp: &ChatResponse, character: &str) -> Result<C
 }
 
 // ---------------------------------------------------------------------------
-// 公开 API
+// 核心调用逻辑
 // ---------------------------------------------------------------------------
 
-/// 分析单个汉字，提取笔画序列、结构类型、部件组成、部首与字形描述。
-///
-/// # 参数
-/// - `character`: 单个汉字
-/// - `api_key`: 智谱 AI 的 API Key
-pub async fn analyze_character(character: &str, api_key: &str) -> Result<CharacterVisual> {
+/// 使用指定服务商分析单个汉字（内部实现）。
+async fn analyze_character_impl(
+    character: &str,
+    provider: &ApiProvider,
+    model: &str,
+) -> Result<CharacterVisual> {
     let chars: Vec<char> = character.chars().collect();
     if chars.len() != 1 || !is_chinese_char(chars[0]) {
         bail!("analyze_character 需要传入单个汉字，收到: {}", character);
     }
     let ch = chars[0];
 
-    info!("开始分析汉字: {}", ch);
+    info!("开始分析汉字: {}（模型: {}，端点: {}）", ch, model, provider.chat_url());
 
     let body = ChatRequest {
-        model: MODEL.to_string(),
+        model: model.to_string(),
         messages: vec![TextMessage {
             role: "user".to_string(),
             content: build_prompt(&ch.to_string()),
@@ -202,11 +204,10 @@ pub async fn analyze_character(character: &str, api_key: &str) -> Result<Charact
         },
     };
 
-    info!("正在向 {} 发送分析请求（汉字 {}）...", MODEL, ch);
+    info!("正在向 API 发送分析请求（汉字 {}）...", ch);
 
-    let resp = reqwest::Client::new()
-        .post(API_URL)
-        .header("Authorization", format!("Bearer {}", api_key))
+    let resp = provider
+        .apply_auth(reqwest::Client::new().post(provider.chat_url()))
         .json(&body)
         .send()
         .await
@@ -240,14 +241,12 @@ pub async fn analyze_character(character: &str, api_key: &str) -> Result<Charact
     parse_character_visual(&chat_resp, &ch.to_string())
 }
 
-/// 分析姓名中所有汉字，返回每个汉字的视觉/字形信息。
-///
-/// 自动过滤非汉字字符。按顺序逐字分析。
-///
-/// # 参数
-/// - `name`: 姓名（如 "李明"）
-/// - `api_key`: 智谱 AI 的 API Key
-pub async fn analyze_name(name: &str, api_key: &str) -> Result<Vec<CharacterVisual>> {
+/// 使用指定服务商分析姓名中所有汉字（内部实现）。
+async fn analyze_name_impl(
+    name: &str,
+    provider: &ApiProvider,
+    model: &str,
+) -> Result<Vec<CharacterVisual>> {
     info!("开始分析姓名: {}", name);
 
     let chars: Vec<char> = name.chars().filter(|c| is_chinese_char(*c)).collect();
@@ -260,7 +259,7 @@ pub async fn analyze_name(name: &str, api_key: &str) -> Result<Vec<CharacterVisu
 
     let mut results = Vec::with_capacity(chars.len());
     for c in &chars {
-        match analyze_character(&c.to_string(), api_key).await {
+        match analyze_character_impl(&c.to_string(), provider, model).await {
             Ok(cv) => results.push(cv),
             Err(e) => {
                 error!("分析汉字 {} 失败: {}", c, e);
@@ -273,10 +272,58 @@ pub async fn analyze_name(name: &str, api_key: &str) -> Result<Vec<CharacterVisu
     Ok(results)
 }
 
-/// 便捷方法：从 [`Config`](crate::config::Config) 读取 API Key 并分析姓名。
+// ---------------------------------------------------------------------------
+// 公开 API
+// ---------------------------------------------------------------------------
+
+/// 分析单个汉字，提取笔画序列、结构类型、部件组成、部首与字形描述。
+///
+/// 此入口固定走 OpenAI 官方；第三方服务商请用
+/// [`analyze_character_with_provider`]。
+///
+/// # 参数
+/// - `character`: 单个汉字
+/// - `api_key`: API Key
+pub async fn analyze_character(character: &str, api_key: &str) -> Result<CharacterVisual> {
+    let provider = ApiProvider::openai(api_key);
+    analyze_character_impl(character, &provider, DEFAULT_MODEL).await
+}
+
+/// 使用显式传入的服务商配置分析单个汉字。
+pub async fn analyze_character_with_provider(
+    character: &str,
+    provider: &ApiProvider,
+    model: &str,
+) -> Result<CharacterVisual> {
+    analyze_character_impl(character, provider, model).await
+}
+
+/// 分析姓名中所有汉字，返回每个汉字的视觉/字形信息。
+///
+/// 自动过滤非汉字字符。按顺序逐字分析。此入口固定走 OpenAI 官方；
+/// 第三方服务商请用 [`analyze_name_with_provider`]。
+///
+/// # 参数
+/// - `name`: 姓名（如 "李明"）
+/// - `api_key`: API Key
+pub async fn analyze_name(name: &str, api_key: &str) -> Result<Vec<CharacterVisual>> {
+    let provider = ApiProvider::openai(api_key);
+    analyze_name_impl(name, &provider, DEFAULT_MODEL).await
+}
+
+/// 使用显式传入的服务商配置分析姓名中所有汉字。
+pub async fn analyze_name_with_provider(
+    name: &str,
+    provider: &ApiProvider,
+    model: &str,
+) -> Result<Vec<CharacterVisual>> {
+    analyze_name_impl(name, provider, model).await
+}
+
+/// 便捷方法：从 [`Config`](crate::config::Config) 读取文本端点配置并分析姓名。
 pub async fn analyze_name_with_config(
     name: &str,
     config: &crate::config::Config,
 ) -> Result<Vec<CharacterVisual>> {
-    analyze_name(name, &config.glm_api_key).await
+    analyze_name_with_provider(name, &config.text, &config.text_model).await
 }

@@ -1,0 +1,1119 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>字相 · 姓名人像艺术</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            /* ============================================================
+               0. CSS Variables & Reset
+               ============================================================ */
+            :root {
+                --bg-page: #f5f0eb;
+                --bg-card: rgba(255, 252, 248, 0.88);
+                --text-primary: #1a120e;
+                --text-secondary: #5a4a3e;
+                --text-muted: #a8988a;
+                --border-light: #e5ddd5;
+                --border-dashed: #c8bdb2;
+                --border-active: #8a7a6e;
+                --accent-gold: #b8943c;
+                --accent-gold-light: #d4b87a;
+                --accent-red: #8b2500;
+                --shadow-card: 0 20px 60px rgba(26, 18, 14, 0.1);
+                --shadow-hover: 0 24px 72px rgba(26, 18, 14, 0.16);
+                --radius-card: 32px;
+                --radius-md: 16px;
+                --radius-sm: 10px;
+                --transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                --font-serif:
+                    "Noto Serif SC", "Source Han Serif SC", "思源宋体", serif;
+            }
+
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 32px 20px;
+                background: var(--bg-page);
+                font-family: var(--font-serif);
+                color: var(--text-primary);
+            }
+
+            /* ============================================================
+               1. Main Container
+               ============================================================ */
+            .container {
+                max-width: 880px;
+                width: 100%;
+                background: var(--bg-card);
+                backdrop-filter: blur(4px);
+                border-radius: var(--radius-card);
+                padding: 48px 44px 44px;
+                box-shadow: var(--shadow-card);
+                border: 1px solid rgba(255, 252, 248, 0.6);
+                transition: box-shadow var(--transition);
+            }
+
+            @media (max-width: 600px) {
+                .container {
+                    padding: 28px 18px 24px;
+                    border-radius: 24px;
+                }
+            }
+
+            /* ============================================================
+               2. Header
+               ============================================================ */
+            .header {
+                text-align: center;
+                margin-bottom: 40px;
+                position: relative;
+            }
+
+            .header-icon {
+                font-size: 40px;
+                display: block;
+                margin-bottom: 4px;
+                opacity: 0.7;
+            }
+
+            .header h1 {
+                font-size: 42px;
+                font-weight: 900;
+                letter-spacing: 14px;
+                color: var(--text-primary);
+                line-height: 1.2;
+            }
+
+            .header .sub {
+                font-size: 14px;
+                font-weight: 400;
+                letter-spacing: 10px;
+                color: var(--text-muted);
+                margin-top: 2px;
+            }
+
+            /* decorative brush stroke — pure CSS */
+            .brush-line {
+                width: 80px;
+                height: 3px;
+                margin: 14px auto 0;
+                background: linear-gradient(
+                    90deg,
+                    transparent,
+                    var(--accent-gold),
+                    transparent
+                );
+                border-radius: 2px;
+                opacity: 0.6;
+            }
+
+            /* ============================================================
+               3. Upload Area
+               ============================================================ */
+            .upload-area {
+                position: relative;
+                border: 2px dashed var(--border-dashed);
+                border-radius: var(--radius-md);
+                padding: 40px 20px 36px;
+                text-align: center;
+                background: rgba(255, 252, 248, 0.4);
+                cursor: pointer;
+                transition:
+                    border-color var(--transition),
+                    background var(--transition),
+                    transform 0.2s;
+            }
+
+            .upload-area:hover {
+                border-color: var(--border-active);
+                background: rgba(255, 252, 248, 0.7);
+            }
+
+            .upload-area.dragover {
+                border-color: var(--accent-gold);
+                background: rgba(255, 252, 248, 0.85);
+                transform: scale(1.006);
+            }
+
+            .upload-area .icon-big {
+                font-size: 44px;
+                display: block;
+                margin-bottom: 6px;
+                opacity: 0.6;
+            }
+
+            .upload-area .primary-text {
+                font-size: 18px;
+                font-weight: 600;
+                color: var(--text-primary);
+            }
+
+            .upload-area .hint-text {
+                font-size: 14px;
+                color: var(--text-muted);
+                margin-top: 2px;
+            }
+
+            .upload-area input[type="file"] {
+                position: absolute;
+                inset: 0;
+                opacity: 0;
+                cursor: pointer;
+            }
+
+            .upload-area .preview-img {
+                max-height: 200px;
+                border-radius: var(--radius-sm);
+                margin-top: 14px;
+                box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
+                display: none;
+            }
+
+            .upload-area .preview-img.visible {
+                display: inline-block;
+            }
+
+            .upload-area .file-name {
+                font-size: 14px;
+                color: var(--text-secondary);
+                margin-top: 8px;
+                display: none;
+            }
+
+            .upload-area .file-name.visible {
+                display: block;
+            }
+
+            /* ============================================================
+               4. Form Fields
+               ============================================================ */
+            .form-group {
+                margin-top: 28px;
+            }
+
+            .form-group label {
+                display: block;
+                font-size: 14px;
+                font-weight: 600;
+                letter-spacing: 2px;
+                color: var(--text-secondary);
+                margin-bottom: 6px;
+            }
+
+            .form-group .input-line {
+                width: 100%;
+                padding: 12px 4px 10px;
+                border: none;
+                border-bottom: 2px solid var(--border-light);
+                background: transparent;
+                font-size: 20px;
+                font-family: var(--font-serif);
+                color: var(--text-primary);
+                transition:
+                    border-color var(--transition),
+                    box-shadow var(--transition);
+                outline: none;
+            }
+
+            .form-group .input-line:focus {
+                border-bottom-color: var(--accent-gold);
+                box-shadow: 0 2px 0 var(--accent-gold-light);
+            }
+
+            .form-group .input-line::placeholder {
+                color: var(--text-muted);
+                font-weight: 300;
+                letter-spacing: 2px;
+            }
+
+            /* ============================================================
+               5. Style Selector
+               ============================================================ */
+            .style-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+                gap: 10px;
+                margin-top: 6px;
+            }
+
+            .style-option {
+                padding: 10px 6px;
+                border: 2px solid var(--border-light);
+                border-radius: var(--radius-sm);
+                text-align: center;
+                cursor: pointer;
+                background: rgba(255, 255, 255, 0.4);
+                font-family: var(--font-serif);
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--text-secondary);
+                transition:
+                    border-color var(--transition),
+                    background var(--transition),
+                    transform 0.2s,
+                    box-shadow var(--transition);
+                user-select: none;
+            }
+
+            .style-option:hover {
+                border-color: var(--border-active);
+                background: rgba(255, 252, 248, 0.7);
+                transform: translateY(-1px);
+            }
+
+            .style-option.active {
+                border-color: var(--accent-gold);
+                background: rgba(184, 148, 60, 0.1);
+                box-shadow: 0 0 0 1px var(--accent-gold-light);
+                color: var(--text-primary);
+                font-weight: 600;
+            }
+
+            .style-option .emoji {
+                display: block;
+                font-size: 22px;
+                margin-bottom: 2px;
+            }
+
+            /* ============================================================
+               6. Submit Button
+               ============================================================ */
+            .submit-wrap {
+                margin-top: 34px;
+            }
+
+            .submit-btn {
+                width: 100%;
+                padding: 18px 12px;
+                border: none;
+                border-radius: 60px;
+                background: var(--text-primary);
+                color: #f5f0eb;
+                font-family: var(--font-serif);
+                font-size: 20px;
+                font-weight: 700;
+                letter-spacing: 6px;
+                cursor: pointer;
+                transition:
+                    background var(--transition),
+                    transform 0.25s,
+                    box-shadow var(--transition);
+                box-shadow: 0 4px 16px rgba(26, 18, 14, 0.12);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 12px;
+            }
+
+            .submit-btn:hover:not(:disabled) {
+                background: #2c1a10;
+                transform: scale(1.012);
+                box-shadow: 0 8px 32px rgba(26, 18, 14, 0.2);
+            }
+
+            .submit-btn:disabled {
+                opacity: 0.55;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            .submit-btn .spinner {
+                display: none;
+                width: 24px;
+                height: 24px;
+                border: 3px solid rgba(255, 252, 248, 0.2);
+                border-top-color: #f5f0eb;
+                border-radius: 50%;
+                animation: spin 0.75s linear infinite;
+            }
+
+            .submit-btn.loading .btn-text {
+                display: none;
+            }
+            .submit-btn.loading .spinner {
+                display: block;
+            }
+
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* ============================================================
+               7. Progress
+               ============================================================ */
+            .progress-section {
+                margin-top: 34px;
+                padding: 24px 20px 20px;
+                border-radius: var(--radius-md);
+                background: rgba(255, 252, 248, 0.5);
+                border: 1px solid var(--border-light);
+                display: none;
+            }
+
+            .progress-section.active {
+                display: block;
+                animation: fadeSlide 0.4s ease;
+            }
+
+            @keyframes fadeSlide {
+                0% {
+                    opacity: 0;
+                    transform: translateY(8px);
+                }
+                100% {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .progress-steps {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                position: relative;
+            }
+
+            .progress-steps::before {
+                content: "";
+                position: absolute;
+                top: 18px;
+                left: 28px;
+                right: 28px;
+                height: 2px;
+                background: var(--border-light);
+                z-index: 0;
+            }
+
+            .progress-steps .step-line {
+                position: absolute;
+                top: 18px;
+                left: 28px;
+                height: 2px;
+                background: var(--accent-gold);
+                z-index: 1;
+                width: 0%;
+                transition: width 0.6s ease;
+            }
+
+            .step-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 6px;
+                z-index: 2;
+                flex: 1;
+            }
+
+            .step-item .dot {
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                background: #fff;
+                border: 2px solid var(--border-light);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--text-muted);
+                transition:
+                    border-color 0.4s,
+                    background 0.4s,
+                    color 0.4s,
+                    transform 0.3s;
+            }
+
+            .step-item.done .dot {
+                border-color: #4caf50;
+                background: #e8f5e9;
+                color: #2e7d32;
+            }
+
+            .step-item.active .dot {
+                border-color: var(--accent-gold);
+                background: rgba(184, 148, 60, 0.12);
+                color: var(--accent-gold);
+                animation: pulse-dot 1.2s ease-in-out infinite;
+            }
+
+            .step-item.pending .dot {
+                border-color: var(--border-light);
+                background: #fff;
+                color: var(--text-muted);
+            }
+
+            @keyframes pulse-dot {
+                0%,
+                100% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.08);
+                }
+            }
+
+            .step-item .label {
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--text-muted);
+                transition: color 0.3s;
+                text-align: center;
+                line-height: 1.3;
+            }
+
+            .step-item.done .label {
+                color: var(--text-secondary);
+            }
+            .step-item.active .label {
+                color: var(--text-primary);
+                font-weight: 600;
+            }
+
+            /* ============================================================
+               8. Result
+               ============================================================ */
+            .result-section {
+                margin-top: 34px;
+                display: none;
+            }
+
+            .result-section.active {
+                display: block;
+                animation: fadeSlide 0.6s ease;
+            }
+
+            .result-image-wrap {
+                border-radius: var(--radius-md);
+                overflow: hidden;
+                background: #ede8e2;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+            }
+
+            .result-image-wrap img {
+                width: 100%;
+                display: block;
+                aspect-ratio: 1 / 1;
+                object-fit: cover;
+                transition: opacity 0.6s;
+            }
+
+            .result-image-wrap .placeholder {
+                aspect-ratio: 1 / 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--text-muted);
+                font-size: 16px;
+                background: #ede8e2;
+            }
+
+            /* result metrics */
+            .result-metrics {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 14px;
+                margin-top: 20px;
+            }
+
+            .metric-card {
+                background: rgba(255, 252, 248, 0.6);
+                border: 1px solid var(--border-light);
+                border-radius: var(--radius-sm);
+                padding: 14px 8px;
+                text-align: center;
+            }
+
+            .metric-card .number {
+                font-size: 26px;
+                font-weight: 700;
+                color: var(--text-primary);
+                letter-spacing: 1px;
+            }
+
+            .metric-card .number .percent {
+                font-size: 16px;
+                font-weight: 400;
+                color: var(--text-muted);
+            }
+
+            .metric-card .label {
+                font-size: 12px;
+                color: var(--text-muted);
+                letter-spacing: 1px;
+                margin-top: 2px;
+            }
+
+            .metric-card.gold .number {
+                color: var(--accent-gold);
+            }
+
+            @media (max-width: 480px) {
+                .result-metrics {
+                    grid-template-columns: 1fr 1fr 1fr;
+                    gap: 8px;
+                }
+                .metric-card .number {
+                    font-size: 20px;
+                }
+            }
+
+            /* prompt toggle */
+            .prompt-toggle {
+                margin-top: 16px;
+                width: 100%;
+                padding: 12px 16px;
+                border: 1px solid var(--border-light);
+                border-radius: var(--radius-sm);
+                background: rgba(255, 252, 248, 0.4);
+                font-family: var(--font-serif);
+                font-size: 14px;
+                color: var(--text-secondary);
+                cursor: pointer;
+                transition:
+                    background var(--transition),
+                    border-color var(--transition);
+            }
+
+            .prompt-toggle:hover {
+                background: rgba(255, 252, 248, 0.7);
+                border-color: var(--border-active);
+            }
+
+            .prompt-content {
+                margin-top: 12px;
+                padding: 18px 20px;
+                border-radius: var(--radius-sm);
+                background: rgba(255, 252, 248, 0.5);
+                border: 1px solid var(--border-light);
+                font-size: 13px;
+                line-height: 1.8;
+                color: var(--text-secondary);
+                white-space: pre-wrap;
+                max-height: 300px;
+                overflow-y: auto;
+                display: none;
+            }
+
+            .prompt-content.open {
+                display: block;
+                animation: fadeSlide 0.3s ease;
+            }
+
+            /* ============================================================
+               9. Utilities & Responsive
+               ============================================================ */
+            @media (max-width: 600px) {
+                .header h1 {
+                    font-size: 30px;
+                    letter-spacing: 8px;
+                }
+                .header .sub {
+                    font-size: 12px;
+                    letter-spacing: 6px;
+                }
+                .style-grid {
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 8px;
+                }
+                .style-option {
+                    font-size: 13px;
+                    padding: 8px 4px;
+                }
+                .style-option .emoji {
+                    font-size: 18px;
+                }
+                .upload-area {
+                    padding: 28px 12px 24px;
+                }
+                .upload-area .primary-text {
+                    font-size: 16px;
+                }
+                .submit-btn {
+                    font-size: 17px;
+                    letter-spacing: 4px;
+                    padding: 16px 12px;
+                }
+                .step-item .label {
+                    font-size: 11px;
+                }
+                .step-item .dot {
+                    width: 30px;
+                    height: 30px;
+                    font-size: 13px;
+                }
+                .progress-steps::before,
+                .progress-steps .step-line {
+                    top: 15px;
+                    left: 20px;
+                    right: 20px;
+                }
+            }
+
+            @media (max-width: 400px) {
+                .style-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                .container {
+                    padding: 20px 12px 18px;
+                }
+            }
+
+            /* scrollbar */
+            .prompt-content::-webkit-scrollbar {
+                width: 4px;
+            }
+            .prompt-content::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            .prompt-content::-webkit-scrollbar-thumb {
+                background: var(--border-light);
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <!-- ========== HEADER ========== -->
+            <header class="header">
+                <span class="header-icon">🖌️</span>
+                <h1>字 相</h1>
+                <div class="sub">字 即 是 相 · 相 即 是 字</div>
+                <div class="brush-line"></div>
+            </header>
+
+            <!-- ========== FORM ========== -->
+            <form id="mainForm">
+                <!-- Upload -->
+                <div class="upload-area" id="uploadArea">
+                    <span class="icon-big">🖼️</span>
+                    <div class="primary-text">点击上传或拖拽图片</div>
+                    <div class="hint-text">支持 JPG / PNG / WEBP</div>
+                    <input type="file" id="fileInput" accept="image/*" />
+                    <img class="preview-img" id="previewImg" alt="预览" />
+                    <div class="file-name" id="fileName"></div>
+                </div>
+
+                <!-- Name -->
+                <div class="form-group">
+                    <label for="nameInput">📝 姓名</label>
+                    <input
+                        class="input-line"
+                        id="nameInput"
+                        type="text"
+                        placeholder="请输入姓名，如：李白"
+                        autocomplete="off"
+                    />
+                </div>
+
+                <!-- Style -->
+                <div class="form-group">
+                    <label>🎨 艺术风格</label>
+                    <div class="style-grid" id="styleGrid">
+                        <div class="style-option active" data-style="中国水墨">
+                            <span class="emoji">🀆</span>水墨
+                        </div>
+                        <div class="style-option" data-style="工笔画">
+                            <span class="emoji">🌸</span>工笔
+                        </div>
+                        <div class="style-option" data-style="油画">
+                            <span class="emoji">🖼️</span>油画
+                        </div>
+                        <div class="style-option" data-style="赛博朋克">
+                            <span class="emoji">🌆</span>赛博朋克
+                        </div>
+                        <div class="style-option" data-style="浮世绘">
+                            <span class="emoji">🌊</span>浮世绘
+                        </div>
+                        <div class="style-option" data-style="印象派">
+                            <span class="emoji">☀️</span>印象派
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <div class="submit-wrap">
+                    <button type="submit" class="submit-btn" id="submitBtn">
+                        <span class="btn-text">✨ 开始创作</span>
+                        <div class="spinner"></div>
+                    </button>
+                </div>
+            </form>
+
+            <!-- ========== PROGRESS ========== -->
+            <div class="progress-section" id="progressSection">
+                <div class="progress-steps" id="progressSteps">
+                    <div
+                        class="step-line"
+                        id="stepLine"
+                        style="width: 0%"
+                    ></div>
+
+                    <div class="step-item pending" data-step="1">
+                        <div class="dot">1</div>
+                        <div class="label">分析面部</div>
+                    </div>
+                    <div class="step-item pending" data-step="2">
+                        <div class="dot">2</div>
+                        <div class="label">解析姓名</div>
+                    </div>
+                    <div class="step-item pending" data-step="3">
+                        <div class="dot">3</div>
+                        <div class="label">融合构图</div>
+                    </div>
+                    <div class="step-item pending" data-step="4">
+                        <div class="dot">4</div>
+                        <div class="label">生成作品</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== RESULT ========== -->
+            <div class="result-section" id="resultSection">
+                <div class="result-image-wrap">
+                    <img
+                        id="resultImage"
+                        src=""
+                        alt="生成的艺术肖像"
+                        style="display: none"
+                    />
+                    <div class="placeholder" id="resultPlaceholder">
+                        🎨 作品将在此呈现
+                    </div>
+                </div>
+
+                <div class="result-metrics">
+                    <div class="metric-card">
+                        <div class="number" id="metricFace">—</div>
+                        <div class="label">面部匹配</div>
+                    </div>
+                    <div class="metric-card gold">
+                        <div class="number" id="metricName">—</div>
+                        <div class="label">姓名融合</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="number" id="metricTotal">—</div>
+                        <div class="label">综合评分</div>
+                    </div>
+                </div>
+
+                <button class="prompt-toggle" id="promptToggle">
+                    📜 查看生成构思
+                </button>
+                <div class="prompt-content" id="promptContent"></div>
+            </div>
+        </div>
+
+        <script>
+            /* ================================================================
+           UI 交互逻辑
+           ================================================================ */
+
+            // ---------- DOM refs ----------
+            const uploadArea = document.getElementById("uploadArea");
+            const fileInput = document.getElementById("fileInput");
+            const previewImg = document.getElementById("previewImg");
+            const fileName = document.getElementById("fileName");
+            const nameInput = document.getElementById("nameInput");
+            const styleGrid = document.getElementById("styleGrid");
+            const submitBtn = document.getElementById("submitBtn");
+            const progressSection = document.getElementById("progressSection");
+            const stepItems = document.querySelectorAll(".step-item");
+            const stepLine = document.getElementById("stepLine");
+            const resultSection = document.getElementById("resultSection");
+            const resultImage = document.getElementById("resultImage");
+            const resultPlaceholder =
+                document.getElementById("resultPlaceholder");
+            const promptToggle = document.getElementById("promptToggle");
+            const promptContent = document.getElementById("promptContent");
+
+            // metric elements
+            const metricFace = document.getElementById("metricFace");
+            const metricName = document.getElementById("metricName");
+            const metricTotal = document.getElementById("metricTotal");
+
+            // ---------- Upload ----------
+            let uploadedFile = null;
+
+            function handleFile(file) {
+                if (!file || !file.type.startsWith("image/")) {
+                    alert("请上传图片文件");
+                    return;
+                }
+                uploadedFile = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImg.src = e.target.result;
+                    previewImg.classList.add("visible");
+                    fileName.textContent = file.name;
+                    fileName.classList.add("visible");
+                    // hide hint text
+                    const hint = uploadArea.querySelector(".hint-text");
+                    if (hint) hint.style.display = "none";
+                    const primary = uploadArea.querySelector(".primary-text");
+                    if (primary) primary.textContent = "✅ 已上传";
+                };
+                reader.readAsDataURL(file);
+            }
+
+            uploadArea.addEventListener("click", () => fileInput.click());
+
+            uploadArea.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                uploadArea.classList.add("dragover");
+            });
+            uploadArea.addEventListener("dragleave", () => {
+                uploadArea.classList.remove("dragover");
+            });
+            uploadArea.addEventListener("drop", (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove("dragover");
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            fileInput.addEventListener("change", () => {
+                if (fileInput.files.length) {
+                    handleFile(fileInput.files[0]);
+                }
+            });
+
+            // ---------- Style selector ----------
+            styleGrid.addEventListener("click", (e) => {
+                const opt = e.target.closest(".style-option");
+                if (!opt) return;
+                document
+                    .querySelectorAll(".style-option")
+                    .forEach((el) => el.classList.remove("active"));
+                opt.classList.add("active");
+            });
+
+            // ---------- Progress helpers ----------
+            function resetProgress() {
+                stepItems.forEach((el) => {
+                    el.className = "step-item pending";
+                    el.querySelector(".dot").textContent = el.dataset.step;
+                });
+                stepLine.style.width = "0%";
+                progressSection.classList.remove("active");
+            }
+
+            function showProgress() {
+                progressSection.classList.add("active");
+                stepItems.forEach((el) => {
+                    el.className = "step-item pending";
+                    el.querySelector(".dot").textContent = el.dataset.step;
+                });
+                stepLine.style.width = "0%";
+            }
+
+            function updateStep(step, status) {
+                const el = document.querySelector(
+                    `.step-item[data-step="${step}"]`,
+                );
+                if (!el) return;
+                const dot = el.querySelector(".dot");
+                el.className = "step-item";
+                if (status === "done") {
+                    el.classList.add("done");
+                    dot.textContent = "✓";
+                } else if (status === "active") {
+                    el.classList.add("active");
+                    dot.textContent = "⟳";
+                } else {
+                    el.classList.add("pending");
+                    dot.textContent = step;
+                }
+                // update line width
+                const total = stepItems.length;
+                const done =
+                    document.querySelectorAll(".step-item.done").length;
+                const active = document.querySelector(".step-item.active")
+                    ? 1
+                    : 0;
+                const progress = ((done + (active ? 0.5 : 0)) / total) * 100;
+                stepLine.style.width = Math.min(progress, 100) + "%";
+            }
+
+            // ---------- 评分计算 ----------
+            function computeScores(data) {
+                // 面部特征匹配度：基于气质关键词数量
+                let faceScore = 85;
+                if (data.face && data.face.overall_vibe) {
+                    faceScore = 80 + data.face.overall_vibe.length * 4;
+                }
+                // 姓名元素融合度：基于汉字笔画总数
+                let nameScore = 85;
+                if (data.name_vis && data.name_vis.length > 0) {
+                    const totalStrokes = data.name_vis.reduce(
+                        (sum, cv) => sum + (cv.stroke_count || 0),
+                        0,
+                    );
+                    nameScore = 78 + Math.min(totalStrokes, 30);
+                }
+                // 视觉元素加分
+                if (data.name_vis) {
+                    const hasVisuals = data.name_vis.some(
+                        (cv) =>
+                            cv.visual_elements && cv.visual_elements.length > 0,
+                    );
+                    if (hasVisuals) nameScore += 3;
+                }
+                faceScore = Math.min(faceScore, 99);
+                nameScore = Math.min(nameScore, 99);
+                const total = Math.round(faceScore * 0.4 + nameScore * 0.6);
+                return {
+                    face: faceScore,
+                    name: nameScore,
+                    total,
+                };
+            }
+
+            function sleep(ms) {
+                return new Promise((r) => setTimeout(r, ms));
+            }
+
+            // ---------- Form submit ----------
+            const mainForm = document.getElementById("mainForm");
+
+            mainForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+
+                const name = nameInput.value.trim();
+                if (!name) {
+                    alert("请输入姓名");
+                    nameInput.focus();
+                    return;
+                }
+                if (!uploadedFile) {
+                    alert("请上传人物照片");
+                    return;
+                }
+
+                const styleEl = document.querySelector(".style-option.active");
+                const style = styleEl ? styleEl.dataset.style : "中国水墨";
+
+                // read file as base64
+                let imageBase64;
+                try {
+                    imageBase64 = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(uploadedFile);
+                    });
+                } catch (err) {
+                    alert("读取图片失败：" + err.message);
+                    return;
+                }
+
+                // UI: loading state
+                submitBtn.disabled = true;
+                submitBtn.classList.add("loading");
+                resultSection.classList.remove("active");
+                resetProgress();
+                showProgress();
+
+                try {
+                    // Step 1: 分析面部
+                    updateStep(1, "active");
+                    await sleep(300);
+
+                    const payload = { name, image: imageBase64, style };
+                    const isServer = location.protocol.startsWith("http");
+                    const endpoint = isServer ? "/api/generate" : "/generate";
+
+                    const response = await fetch(endpoint, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload),
+                    });
+
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        throw new Error(
+                            `服务器错误 (${response.status}): ${errText}`,
+                        );
+                    }
+
+                    const data = await response.json();
+                    updateStep(1, "done");
+
+                    // 模拟后续步骤（后端 Agent 会实际执行，前端展示进度）
+                    updateStep(2, "active");
+                    await sleep(500);
+                    updateStep(2, "done");
+
+                    updateStep(3, "active");
+                    await sleep(500);
+                    updateStep(3, "done");
+
+                    updateStep(4, "active");
+                    await sleep(600);
+                    updateStep(4, "done");
+
+                    // 显示结果
+                    if (data.image_url) {
+                        resultImage.src = data.image_url;
+                        resultImage.style.display = "block";
+                        resultPlaceholder.style.display = "none";
+                    } else if (data.image_base64) {
+                        resultImage.src = data.image_base64;
+                        resultImage.style.display = "block";
+                        resultPlaceholder.style.display = "none";
+                    } else {
+                        // fallback: 显示占位
+                        resultImage.style.display = "none";
+                        resultPlaceholder.style.display = "flex";
+                        resultPlaceholder.textContent =
+                            "⚠️ 未返回图片，请检查 API 配置";
+                    }
+
+                    // 更新评分
+                    const scores = computeScores(data);
+                    metricFace.textContent = scores.face + "%";
+                    metricName.textContent = scores.name + "%";
+                    metricTotal.textContent = scores.total + "%";
+
+                    // 显示 prompt
+                    promptContent.textContent =
+                        data.prompt || "（无 Prompt 信息）";
+                    promptContent.classList.remove("open");
+                    promptToggle.textContent = "📜 查看生成构思";
+
+                    resultSection.classList.add("active");
+                } catch (err) {
+                    alert("生成失败：" + err.message);
+                    resetProgress();
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove("loading");
+                }
+            });
+
+            // ---------- Prompt toggle ----------
+            promptToggle.addEventListener("click", () => {
+                const isOpen = promptContent.classList.toggle("open");
+                promptToggle.textContent = isOpen
+                    ? "📜 收起构思"
+                    : "📜 查看生成构思";
+            });
+        </script>
+    </body>
+</html>

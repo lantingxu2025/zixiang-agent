@@ -1,22 +1,19 @@
 //! 面部分析工具
 //!
-//! 调用智谱 AI 的视觉模型 GLM-4.6V-Flash 分析人物照片的面部特征，
-//! 并返回结构化的 [`FaceFeatures`] 数据。
+//! 调用视觉模型分析人物照片的面部特征，并返回结构化的 [`FaceFeatures`]。
 //!
-//! 主模型不可用时会自动回退到 `glm-4v-flash`。
+//! 支持任意 OpenAI 兼容的第三方服务商（API2D、OpenRouter、米醋 API 等），
+//! 通过 [`ApiProvider`](crate::config::ApiProvider) 配置 base url、认证方式等。
 
 use anyhow::{anyhow, bail, Context, Result};
 use serde::{Deserialize, Serialize};
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
+use crate::config::ApiProvider;
 use crate::types::FaceFeatures;
 
-/// 智谱 AI 视觉对话 API 地址
-const API_URL: &str = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
-/// 主模型（首选）
-const PRIMARY_MODEL: &str = "glm-4.6v-flash";
-/// 备用模型（主模型不可用时使用）
-const FALLBACK_MODEL: &str = "glm-4v-flash";
+/// 默认视觉模型（standalone 入口使用）
+const DEFAULT_MODEL: &str = "gpt-4o";
 
 // ---------------------------------------------------------------------------
 // 请求 / 响应结构体
@@ -72,18 +69,6 @@ struct Choice {
 struct ResponseMessage {
     /// content 可能是字符串（JSON 文本）或对象
     content: serde_json::Value,
-}
-
-// ---------------------------------------------------------------------------
-// 调用错误类型
-// ---------------------------------------------------------------------------
-
-/// 调用模型时可能出现的错误分类。
-enum CallError {
-    /// 模型不可用（应尝试备用模型）
-    ModelUnavailable(String),
-    /// 其他错误（不应触发 fallback）
-    Other(anyhow::Error),
 }
 
 // ---------------------------------------------------------------------------
@@ -171,24 +156,6 @@ fn clean_json_content(s: &str) -> String {
     }
 }
 
-/// 根据 HTTP 状态码与响应体判断模型是否"不可用"。
-///
-/// 兼容中英文错误信息（"model not found" / "模型不存在" 等）。
-fn is_model_unavailable(status: reqwest::StatusCode, body: &str) -> bool {
-    if status.as_u16() == 404 {
-        return true;
-    }
-    let body_lower = body.to_lowercase();
-    let mentions_model = body_lower.contains("model") || body_lower.contains("模型");
-    let indicates_unavailable = body_lower.contains("not found")
-        || body_lower.contains("不存在")
-        || body_lower.contains("invalid")
-        || body_lower.contains("unavailable")
-        || body_lower.contains("不支持")
-        || body_lower.contains("no such");
-    mentions_model && indicates_unavailable
-}
-
 /// 从 ChatResponse 的 content 中提取并解析 FaceFeatures。
 fn parse_face_features(chat_resp: &ChatResponse, model: &str) -> Result<FaceFeatures> {
     let content_value = chat_resp
@@ -236,62 +203,45 @@ fn parse_face_features(chat_resp: &ChatResponse, model: &str) -> Result<FaceFeat
 // 核心调用逻辑
 // ---------------------------------------------------------------------------
 
-/// 调用指定模型分析面部特征。
+/// 调用指定服务商的视觉模型分析面部特征。
 async fn call_model(
+    provider: &ApiProvider,
     model: &str,
     image_url: &str,
-    api_key: &str,
-) -> std::result::Result<FaceFeatures, CallError> {
+) -> Result<FaceFeatures> {
     let body = build_request_body(model, image_url);
+    let url = provider.chat_url();
 
-    info!("正在向 {} 发送分析请求...", model);
+    info!("正在向 API 发送分析请求（模型: {}，端点: {}）...", model, url);
 
-    let resp = reqwest::Client::new()
-        .post(API_URL)
-        .header("Authorization", format!("Bearer {}", api_key))
+    let resp = provider
+        .apply_auth(reqwest::Client::new().post(&url))
         .json(&body)
         .send()
         .await
-        .map_err(|e| CallError::Other(anyhow!("发送请求到 {} 失败: {}", model, e)))?;
+        .with_context(|| format!("发送请求失败（模型: {}，端点: {}）", model, url))?;
 
     let status = resp.status();
-    let raw_text = resp
-        .text()
-        .await
-        .map_err(|e| CallError::Other(anyhow!("读取 {} 响应体失败: {}", model, e)))?;
+    let raw_text = resp.text().await.context("读取响应体失败")?;
 
     if !status.is_success() {
-        if is_model_unavailable(status, &raw_text) {
-            warn!("{} 模型不可用（HTTP {}）：{}", model, status, raw_text);
-            return Err(CallError::ModelUnavailable(format!(
-                "{} 不可用（HTTP {}）",
-                model, status
-            )));
-        }
         error!(
             "{} API 返回错误状态码 {}，响应: {}",
             model, status, raw_text
         );
-        return Err(CallError::Other(anyhow!(
-            "{} API 返回错误状态码 {}: {}",
-            model,
-            status,
-            raw_text
-        )));
+        bail!("{} API 返回错误状态码 {}: {}", model, status, raw_text);
     }
 
     info!("{} API 返回成功，正在解析响应", model);
 
-    let chat_resp: ChatResponse = serde_json::from_str(&raw_text).map_err(|e| {
-        CallError::Other(anyhow!(
-            "解析 {} 的响应 JSON 失败: {}，原始响应: {}",
-            model,
-            e,
-            raw_text
-        ))
+    let chat_resp: ChatResponse = serde_json::from_str(&raw_text).with_context(|| {
+        format!(
+            "解析 {} 的响应 JSON 失败，原始响应: {}",
+            model, raw_text
+        )
     })?;
 
-    parse_face_features(&chat_resp, model).map_err(CallError::Other)
+    parse_face_features(&chat_resp, model)
 }
 
 // ---------------------------------------------------------------------------
@@ -300,64 +250,42 @@ async fn call_model(
 
 /// 分析人物照片的面部特征。
 ///
-/// 优先使用 GLM-4.6V-Flash 模型；若该模型不可用，自动回退到 `glm-4v-flash`。
+/// 使用 GPT-4o 视觉模型分析图片，返回结构化的面部特征。
 ///
 /// # 参数
 /// - `image_url`: 图片 URL 或 base64 编码字符串（裸 base64 会自动补上 data URL 前缀）
-/// - `api_key`: 智谱 AI 的 API Key
+/// - `api_key`: API Key（此入口固定走 OpenAI 官方；第三方服务商请用
+///   [`analyze_face_with_provider`] 或 [`analyze_face_with_config`]
 ///
 /// # 返回
-/// 解析成功的 [`FaceFeatures`]，包含脸型、眼型、眉型、鼻高、唇厚、发型与气质关键词。
+/// 解析成功的 [`FaceFeatures`]，包含脸型、五官位置/比例、五官形状与气质关键词。
 pub async fn analyze_face(image_url: &str, api_key: &str) -> Result<FaceFeatures> {
     info!("开始分析面部特征，图片: {}", image_url);
-
-    // 1. 尝试主模型
-    match call_model(PRIMARY_MODEL, image_url, api_key).await {
-        Ok(features) => {
-            info!("使用主模型 {} 成功分析面部特征", PRIMARY_MODEL);
-            return Ok(features);
-        }
-        Err(CallError::ModelUnavailable(reason)) => {
-            warn!(
-                "主模型 {} 不可用: {}，尝试回退到 {}",
-                PRIMARY_MODEL, reason, FALLBACK_MODEL
-            );
-        }
-        Err(CallError::Other(e)) => {
-            error!("主模型 {} 调用失败: {}", PRIMARY_MODEL, e);
-            return Err(e.context(format!("主模型 {} 调用失败", PRIMARY_MODEL)));
-        }
-    }
-
-    // 2. 回退到备用模型
-    match call_model(FALLBACK_MODEL, image_url, api_key).await {
-        Ok(features) => {
-            info!("使用备用模型 {} 成功分析面部特征", FALLBACK_MODEL);
-            Ok(features)
-        }
-        Err(CallError::ModelUnavailable(reason)) => {
-            error!("备用模型 {} 也不可用: {}", FALLBACK_MODEL, reason);
-            Err(anyhow!(
-                "主模型 {} 与备用模型 {} 均不可用（{}）",
-                PRIMARY_MODEL,
-                FALLBACK_MODEL,
-                reason
-            ))
-        }
-        Err(CallError::Other(e)) => {
-            error!("备用模型 {} 调用失败: {}", FALLBACK_MODEL, e);
-            Err(e.context(format!(
-                "主模型 {} 不可用且备用模型 {} 调用失败",
-                PRIMARY_MODEL, FALLBACK_MODEL
-            )))
-        }
-    }
+    let provider = ApiProvider::openai(api_key);
+    call_model(&provider, DEFAULT_MODEL, image_url).await
 }
 
-/// 便捷方法：从 [`Config`](crate::config::Config) 读取 API Key 并分析面部特征。
+/// 使用显式传入的服务商配置分析面部特征。
+///
+/// 适用于自定义服务商（米醋 / API2D / OpenRouter 等）。
+pub async fn analyze_face_with_provider(
+    image_url: &str,
+    provider: &ApiProvider,
+    model: &str,
+) -> Result<FaceFeatures> {
+    info!(
+        "开始分析面部特征（模型: {}，端点: {}），图片: {}",
+        model,
+        provider.chat_url(),
+        image_url
+    );
+    call_model(provider, model, image_url).await
+}
+
+/// 便捷方法：从 [`Config`](crate::config::Config) 读取视觉端点配置并分析面部特征。
 pub async fn analyze_face_with_config(
     image_url: &str,
     config: &crate::config::Config,
 ) -> Result<FaceFeatures> {
-    analyze_face(image_url, &config.glm_api_key).await
+    analyze_face_with_provider(image_url, &config.vision, &config.vision_model).await
 }
