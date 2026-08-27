@@ -1,1119 +1,1309 @@
 <!doctype html>
 <html lang="zh-CN">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>字相 · 姓名人像艺术</title>
-        <link
-            href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&display=swap"
-            rel="stylesheet"
-        />
-        <style>
-            /* ============================================================
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>字相 · 姓名人像艺术</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&display=swap"
+        rel="stylesheet" />
+    <style>
+        /* ============================================================
                0. CSS Variables & Reset
                ============================================================ */
-            :root {
-                --bg-page: #f5f0eb;
-                --bg-card: rgba(255, 252, 248, 0.88);
-                --text-primary: #1a120e;
-                --text-secondary: #5a4a3e;
-                --text-muted: #a8988a;
-                --border-light: #e5ddd5;
-                --border-dashed: #c8bdb2;
-                --border-active: #8a7a6e;
-                --accent-gold: #b8943c;
-                --accent-gold-light: #d4b87a;
-                --accent-red: #8b2500;
-                --shadow-card: 0 20px 60px rgba(26, 18, 14, 0.1);
-                --shadow-hover: 0 24px 72px rgba(26, 18, 14, 0.16);
-                --radius-card: 32px;
-                --radius-md: 16px;
-                --radius-sm: 10px;
-                --transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-                --font-serif:
-                    "Noto Serif SC", "Source Han Serif SC", "思源宋体", serif;
-            }
+        :root {
+            --bg-page: #f5f0eb;
+            --bg-card: rgba(255, 252, 248, 0.88);
+            --text-primary: #1a120e;
+            --text-secondary: #5a4a3e;
+            --text-muted: #a8988a;
+            --border-light: #e5ddd5;
+            --border-dashed: #c8bdb2;
+            --border-active: #8a7a6e;
+            --accent-gold: #b8943c;
+            --accent-gold-light: #d4b87a;
+            --accent-red: #8b2500;
+            --shadow-card: 0 20px 60px rgba(26, 18, 14, 0.1);
+            --shadow-hover: 0 24px 72px rgba(26, 18, 14, 0.16);
+            --radius-card: 32px;
+            --radius-md: 16px;
+            --radius-sm: 10px;
+            --transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            --font-serif:
+                "Noto Serif SC", "Source Han Serif SC", "思源宋体", serif;
+        }
 
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-            body {
-                min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 32px 20px;
-                background: var(--bg-page);
-                font-family: var(--font-serif);
-                color: var(--text-primary);
-            }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 20px;
+            background: var(--bg-page);
+            font-family: var(--font-serif);
+            color: var(--text-primary);
+        }
 
-            /* ============================================================
+        /* ============================================================
                1. Main Container
                ============================================================ */
+        .container {
+            max-width: 880px;
+            width: 100%;
+            background: var(--bg-card);
+            backdrop-filter: blur(4px);
+            border-radius: var(--radius-card);
+            padding: 48px 44px 44px;
+            box-shadow: var(--shadow-card);
+            border: 1px solid rgba(255, 252, 248, 0.6);
+            transition: box-shadow var(--transition);
+        }
+
+        .connection-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 12px;
+            align-items: end;
+            margin-bottom: 28px;
+            padding: 16px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            background: rgba(255, 252, 248, 0.55);
+        }
+
+        .connection-panel label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .connection-panel input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            background: rgba(255, 255, 255, 0.7);
+            color: var(--text-primary);
+            font: 14px var(--font-serif);
+            outline: none;
+        }
+
+        .connection-panel input:focus {
+            border-color: var(--accent-gold);
+        }
+
+        .config-btn {
+            padding: 10px 16px;
+            border: 1px solid var(--text-primary);
+            border-radius: var(--radius-sm);
+            background: var(--text-primary);
+            color: #f5f0eb;
+            font: 14px var(--font-serif);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .connection-status {
+            grid-column: 1 / -1;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .connection-status.ready {
+            color: #2e7d32;
+        }
+
+        .connection-status.error {
+            color: var(--accent-red);
+        }
+
+        .agent-output {
+            display: none;
+            margin-top: 34px;
+            animation: fadeSlide 0.4s ease;
+        }
+
+        .agent-output.active {
+            display: block;
+        }
+
+        .output-block {
+            margin-top: 12px;
+            padding: 16px 18px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            background: rgba(255, 252, 248, 0.55);
+        }
+
+        .output-block h3 {
+            margin-bottom: 10px;
+            font-size: 15px;
+            color: var(--text-primary);
+        }
+
+        .output-block pre {
+            max-height: 260px;
+            overflow: auto;
+            white-space: pre-wrap;
+            color: var(--text-secondary);
+            font: 13px/1.7 ui-monospace, SFMono-Regular, Consolas, monospace;
+        }
+
+        .output-block dl {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px 18px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .output-block dt {
+            color: var(--text-muted);
+        }
+
+        .output-block dd {
+            margin: 0;
+        }
+
+        @media (max-width: 600px) {
+            .connection-panel {
+                grid-template-columns: 1fr;
+            }
+
+            .connection-status {
+                grid-column: auto;
+            }
+
+            .output-block dl {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
             .container {
-                max-width: 880px;
-                width: 100%;
-                background: var(--bg-card);
-                backdrop-filter: blur(4px);
-                border-radius: var(--radius-card);
-                padding: 48px 44px 44px;
-                box-shadow: var(--shadow-card);
-                border: 1px solid rgba(255, 252, 248, 0.6);
-                transition: box-shadow var(--transition);
+                padding: 28px 18px 24px;
+                border-radius: 24px;
             }
+        }
 
-            @media (max-width: 600px) {
-                .container {
-                    padding: 28px 18px 24px;
-                    border-radius: 24px;
-                }
-            }
-
-            /* ============================================================
+        /* ============================================================
                2. Header
                ============================================================ */
-            .header {
-                text-align: center;
-                margin-bottom: 40px;
-                position: relative;
-            }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
 
-            .header-icon {
-                font-size: 40px;
-                display: block;
-                margin-bottom: 4px;
-                opacity: 0.7;
-            }
+        .header-icon {
+            font-size: 40px;
+            display: block;
+            margin-bottom: 4px;
+            opacity: 0.7;
+        }
 
-            .header h1 {
-                font-size: 42px;
-                font-weight: 900;
-                letter-spacing: 14px;
-                color: var(--text-primary);
-                line-height: 1.2;
-            }
+        .header h1 {
+            font-size: 42px;
+            font-weight: 900;
+            letter-spacing: 14px;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
 
-            .header .sub {
-                font-size: 14px;
-                font-weight: 400;
-                letter-spacing: 10px;
-                color: var(--text-muted);
-                margin-top: 2px;
-            }
+        .header .sub {
+            font-size: 14px;
+            font-weight: 400;
+            letter-spacing: 10px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
 
-            /* decorative brush stroke — pure CSS */
-            .brush-line {
-                width: 80px;
-                height: 3px;
-                margin: 14px auto 0;
-                background: linear-gradient(
-                    90deg,
+        /* decorative brush stroke — pure CSS */
+        .brush-line {
+            width: 80px;
+            height: 3px;
+            margin: 14px auto 0;
+            background: linear-gradient(90deg,
                     transparent,
                     var(--accent-gold),
-                    transparent
-                );
-                border-radius: 2px;
-                opacity: 0.6;
-            }
+                    transparent);
+            border-radius: 2px;
+            opacity: 0.6;
+        }
 
-            /* ============================================================
+        /* ============================================================
                3. Upload Area
                ============================================================ */
-            .upload-area {
-                position: relative;
-                border: 2px dashed var(--border-dashed);
-                border-radius: var(--radius-md);
-                padding: 40px 20px 36px;
-                text-align: center;
-                background: rgba(255, 252, 248, 0.4);
-                cursor: pointer;
-                transition:
-                    border-color var(--transition),
-                    background var(--transition),
-                    transform 0.2s;
-            }
+        .upload-area {
+            position: relative;
+            border: 2px dashed var(--border-dashed);
+            border-radius: var(--radius-md);
+            padding: 40px 20px 36px;
+            text-align: center;
+            background: rgba(255, 252, 248, 0.4);
+            cursor: pointer;
+            transition:
+                border-color var(--transition),
+                background var(--transition),
+                transform 0.2s;
+        }
 
-            .upload-area:hover {
-                border-color: var(--border-active);
-                background: rgba(255, 252, 248, 0.7);
-            }
+        .upload-area:hover {
+            border-color: var(--border-active);
+            background: rgba(255, 252, 248, 0.7);
+        }
 
-            .upload-area.dragover {
-                border-color: var(--accent-gold);
-                background: rgba(255, 252, 248, 0.85);
-                transform: scale(1.006);
-            }
+        .upload-area.dragover {
+            border-color: var(--accent-gold);
+            background: rgba(255, 252, 248, 0.85);
+            transform: scale(1.006);
+        }
 
-            .upload-area .icon-big {
-                font-size: 44px;
-                display: block;
-                margin-bottom: 6px;
-                opacity: 0.6;
-            }
+        .upload-area .icon-big {
+            font-size: 44px;
+            display: block;
+            margin-bottom: 6px;
+            opacity: 0.6;
+        }
 
-            .upload-area .primary-text {
-                font-size: 18px;
-                font-weight: 600;
-                color: var(--text-primary);
-            }
+        .upload-area .primary-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
 
-            .upload-area .hint-text {
-                font-size: 14px;
-                color: var(--text-muted);
-                margin-top: 2px;
-            }
+        .upload-area .hint-text {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
 
-            .upload-area input[type="file"] {
-                position: absolute;
-                inset: 0;
-                opacity: 0;
-                cursor: pointer;
-            }
+        .upload-area input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
 
-            .upload-area .preview-img {
-                max-height: 200px;
-                border-radius: var(--radius-sm);
-                margin-top: 14px;
-                box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
-                display: none;
-            }
+        .upload-area .preview-img {
+            max-height: 200px;
+            border-radius: var(--radius-sm);
+            margin-top: 14px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
+            display: none;
+        }
 
-            .upload-area .preview-img.visible {
-                display: inline-block;
-            }
+        .upload-area .preview-img.visible {
+            display: inline-block;
+        }
 
-            .upload-area .file-name {
-                font-size: 14px;
-                color: var(--text-secondary);
-                margin-top: 8px;
-                display: none;
-            }
+        .upload-area .file-name {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            display: none;
+        }
 
-            .upload-area .file-name.visible {
-                display: block;
-            }
+        .upload-area .file-name.visible {
+            display: block;
+        }
 
-            /* ============================================================
+        /* ============================================================
                4. Form Fields
                ============================================================ */
-            .form-group {
-                margin-top: 28px;
-            }
+        .form-group {
+            margin-top: 28px;
+        }
 
-            .form-group label {
-                display: block;
-                font-size: 14px;
-                font-weight: 600;
-                letter-spacing: 2px;
-                color: var(--text-secondary);
-                margin-bottom: 6px;
-            }
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
 
-            .form-group .input-line {
-                width: 100%;
-                padding: 12px 4px 10px;
-                border: none;
-                border-bottom: 2px solid var(--border-light);
-                background: transparent;
-                font-size: 20px;
-                font-family: var(--font-serif);
-                color: var(--text-primary);
-                transition:
-                    border-color var(--transition),
-                    box-shadow var(--transition);
-                outline: none;
-            }
+        .form-group .input-line {
+            width: 100%;
+            padding: 12px 4px 10px;
+            border: none;
+            border-bottom: 2px solid var(--border-light);
+            background: transparent;
+            font-size: 20px;
+            font-family: var(--font-serif);
+            color: var(--text-primary);
+            transition:
+                border-color var(--transition),
+                box-shadow var(--transition);
+            outline: none;
+        }
 
-            .form-group .input-line:focus {
-                border-bottom-color: var(--accent-gold);
-                box-shadow: 0 2px 0 var(--accent-gold-light);
-            }
+        .form-group .input-line:focus {
+            border-bottom-color: var(--accent-gold);
+            box-shadow: 0 2px 0 var(--accent-gold-light);
+        }
 
-            .form-group .input-line::placeholder {
-                color: var(--text-muted);
-                font-weight: 300;
-                letter-spacing: 2px;
-            }
+        .form-group .input-line::placeholder {
+            color: var(--text-muted);
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
 
-            /* ============================================================
+        /* ============================================================
                5. Style Selector
                ============================================================ */
-            .style-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
-                gap: 10px;
-                margin-top: 6px;
-            }
+        .style-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+            gap: 10px;
+            margin-top: 6px;
+        }
 
-            .style-option {
-                padding: 10px 6px;
-                border: 2px solid var(--border-light);
-                border-radius: var(--radius-sm);
-                text-align: center;
-                cursor: pointer;
-                background: rgba(255, 255, 255, 0.4);
-                font-family: var(--font-serif);
-                font-size: 14px;
-                font-weight: 500;
-                color: var(--text-secondary);
-                transition:
-                    border-color var(--transition),
-                    background var(--transition),
-                    transform 0.2s,
-                    box-shadow var(--transition);
-                user-select: none;
-            }
+        .style-option {
+            padding: 10px 6px;
+            border: 2px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            text-align: center;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.4);
+            font-family: var(--font-serif);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition:
+                border-color var(--transition),
+                background var(--transition),
+                transform 0.2s,
+                box-shadow var(--transition);
+            user-select: none;
+        }
 
-            .style-option:hover {
-                border-color: var(--border-active);
-                background: rgba(255, 252, 248, 0.7);
-                transform: translateY(-1px);
-            }
+        .style-option:hover {
+            border-color: var(--border-active);
+            background: rgba(255, 252, 248, 0.7);
+            transform: translateY(-1px);
+        }
 
-            .style-option.active {
-                border-color: var(--accent-gold);
-                background: rgba(184, 148, 60, 0.1);
-                box-shadow: 0 0 0 1px var(--accent-gold-light);
-                color: var(--text-primary);
-                font-weight: 600;
-            }
+        .style-option.active {
+            border-color: var(--accent-gold);
+            background: rgba(184, 148, 60, 0.1);
+            box-shadow: 0 0 0 1px var(--accent-gold-light);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
 
-            .style-option .emoji {
-                display: block;
-                font-size: 22px;
-                margin-bottom: 2px;
-            }
+        .style-option .emoji {
+            display: block;
+            font-size: 22px;
+            margin-bottom: 2px;
+        }
 
-            /* ============================================================
+        /* ============================================================
                6. Submit Button
                ============================================================ */
-            .submit-wrap {
-                margin-top: 34px;
-            }
+        .submit-wrap {
+            margin-top: 34px;
+        }
 
-            .submit-btn {
-                width: 100%;
-                padding: 18px 12px;
-                border: none;
-                border-radius: 60px;
-                background: var(--text-primary);
-                color: #f5f0eb;
-                font-family: var(--font-serif);
-                font-size: 20px;
-                font-weight: 700;
-                letter-spacing: 6px;
-                cursor: pointer;
-                transition:
-                    background var(--transition),
-                    transform 0.25s,
-                    box-shadow var(--transition);
-                box-shadow: 0 4px 16px rgba(26, 18, 14, 0.12);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 12px;
-            }
+        .submit-btn {
+            width: 100%;
+            padding: 18px 12px;
+            border: none;
+            border-radius: 60px;
+            background: var(--text-primary);
+            color: #f5f0eb;
+            font-family: var(--font-serif);
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 6px;
+            cursor: pointer;
+            transition:
+                background var(--transition),
+                transform 0.25s,
+                box-shadow var(--transition);
+            box-shadow: 0 4px 16px rgba(26, 18, 14, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
 
-            .submit-btn:hover:not(:disabled) {
-                background: #2c1a10;
-                transform: scale(1.012);
-                box-shadow: 0 8px 32px rgba(26, 18, 14, 0.2);
-            }
+        .submit-btn:hover:not(:disabled) {
+            background: #2c1a10;
+            transform: scale(1.012);
+            box-shadow: 0 8px 32px rgba(26, 18, 14, 0.2);
+        }
 
-            .submit-btn:disabled {
-                opacity: 0.55;
-                cursor: not-allowed;
-                transform: none;
-            }
+        .submit-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+        }
 
-            .submit-btn .spinner {
-                display: none;
-                width: 24px;
-                height: 24px;
-                border: 3px solid rgba(255, 252, 248, 0.2);
-                border-top-color: #f5f0eb;
-                border-radius: 50%;
-                animation: spin 0.75s linear infinite;
-            }
+        .submit-btn .spinner {
+            display: none;
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 252, 248, 0.2);
+            border-top-color: #f5f0eb;
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+        }
 
-            .submit-btn.loading .btn-text {
-                display: none;
-            }
-            .submit-btn.loading .spinner {
-                display: block;
-            }
+        .submit-btn.loading .btn-text {
+            display: none;
+        }
 
-            @keyframes spin {
-                to {
-                    transform: rotate(360deg);
-                }
-            }
+        .submit-btn.loading .spinner {
+            display: block;
+        }
 
-            /* ============================================================
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ============================================================
                7. Progress
                ============================================================ */
-            .progress-section {
-                margin-top: 34px;
-                padding: 24px 20px 20px;
-                border-radius: var(--radius-md);
-                background: rgba(255, 252, 248, 0.5);
-                border: 1px solid var(--border-light);
-                display: none;
+        .progress-section {
+            margin-top: 34px;
+            padding: 24px 20px 20px;
+            border-radius: var(--radius-md);
+            background: rgba(255, 252, 248, 0.5);
+            border: 1px solid var(--border-light);
+            display: none;
+        }
+
+        .progress-section.active {
+            display: block;
+            animation: fadeSlide 0.4s ease;
+        }
+
+        @keyframes fadeSlide {
+            0% {
+                opacity: 0;
+                transform: translateY(8px);
             }
 
-            .progress-section.active {
-                display: block;
-                animation: fadeSlide 0.4s ease;
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+
+        .progress-steps::before {
+            content: "";
+            position: absolute;
+            top: 18px;
+            left: 28px;
+            right: 28px;
+            height: 2px;
+            background: var(--border-light);
+            z-index: 0;
+        }
+
+        .progress-steps .step-line {
+            position: absolute;
+            top: 18px;
+            left: 28px;
+            height: 2px;
+            background: var(--accent-gold);
+            z-index: 1;
+            width: 0%;
+            transition: width 0.6s ease;
+        }
+
+        .step-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            z-index: 2;
+            flex: 1;
+        }
+
+        .step-item .dot {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition:
+                border-color 0.4s,
+                background 0.4s,
+                color 0.4s,
+                transform 0.3s;
+        }
+
+        .step-item.done .dot {
+            border-color: #4caf50;
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .step-item.active .dot {
+            border-color: var(--accent-gold);
+            background: rgba(184, 148, 60, 0.12);
+            color: var(--accent-gold);
+            animation: pulse-dot 1.2s ease-in-out infinite;
+        }
+
+        .step-item.pending .dot {
+            border-color: var(--border-light);
+            background: #fff;
+            color: var(--text-muted);
+        }
+
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                transform: scale(1);
             }
 
-            @keyframes fadeSlide {
-                0% {
-                    opacity: 0;
-                    transform: translateY(8px);
-                }
-                100% {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
+            50% {
+                transform: scale(1.08);
             }
+        }
 
-            .progress-steps {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                position: relative;
-            }
+        .step-item .label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: color 0.3s;
+            text-align: center;
+            line-height: 1.3;
+        }
 
-            .progress-steps::before {
-                content: "";
-                position: absolute;
-                top: 18px;
-                left: 28px;
-                right: 28px;
-                height: 2px;
-                background: var(--border-light);
-                z-index: 0;
-            }
+        .step-item.done .label {
+            color: var(--text-secondary);
+        }
 
-            .progress-steps .step-line {
-                position: absolute;
-                top: 18px;
-                left: 28px;
-                height: 2px;
-                background: var(--accent-gold);
-                z-index: 1;
-                width: 0%;
-                transition: width 0.6s ease;
-            }
+        .step-item.active .label {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
 
-            .step-item {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 6px;
-                z-index: 2;
-                flex: 1;
-            }
-
-            .step-item .dot {
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-                background: #fff;
-                border: 2px solid var(--border-light);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 16px;
-                font-weight: 600;
-                color: var(--text-muted);
-                transition:
-                    border-color 0.4s,
-                    background 0.4s,
-                    color 0.4s,
-                    transform 0.3s;
-            }
-
-            .step-item.done .dot {
-                border-color: #4caf50;
-                background: #e8f5e9;
-                color: #2e7d32;
-            }
-
-            .step-item.active .dot {
-                border-color: var(--accent-gold);
-                background: rgba(184, 148, 60, 0.12);
-                color: var(--accent-gold);
-                animation: pulse-dot 1.2s ease-in-out infinite;
-            }
-
-            .step-item.pending .dot {
-                border-color: var(--border-light);
-                background: #fff;
-                color: var(--text-muted);
-            }
-
-            @keyframes pulse-dot {
-                0%,
-                100% {
-                    transform: scale(1);
-                }
-                50% {
-                    transform: scale(1.08);
-                }
-            }
-
-            .step-item .label {
-                font-size: 13px;
-                font-weight: 500;
-                color: var(--text-muted);
-                transition: color 0.3s;
-                text-align: center;
-                line-height: 1.3;
-            }
-
-            .step-item.done .label {
-                color: var(--text-secondary);
-            }
-            .step-item.active .label {
-                color: var(--text-primary);
-                font-weight: 600;
-            }
-
-            /* ============================================================
+        /* ============================================================
                8. Result
                ============================================================ */
-            .result-section {
-                margin-top: 34px;
-                display: none;
-            }
+        .result-section {
+            margin-top: 34px;
+            display: none;
+        }
 
-            .result-section.active {
-                display: block;
-                animation: fadeSlide 0.6s ease;
-            }
+        .result-section.active {
+            display: block;
+            animation: fadeSlide 0.6s ease;
+        }
 
-            .result-image-wrap {
-                border-radius: var(--radius-md);
-                overflow: hidden;
-                background: #ede8e2;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
-            }
+        .result-image-wrap {
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            background: #ede8e2;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+        }
 
-            .result-image-wrap img {
-                width: 100%;
-                display: block;
-                aspect-ratio: 1 / 1;
-                object-fit: cover;
-                transition: opacity 0.6s;
-            }
+        .result-image-wrap img {
+            width: 100%;
+            display: block;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            transition: opacity 0.6s;
+        }
 
-            .result-image-wrap .placeholder {
-                aspect-ratio: 1 / 1;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: var(--text-muted);
-                font-size: 16px;
-                background: #ede8e2;
-            }
+        .result-image-wrap .placeholder {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 16px;
+            background: #ede8e2;
+        }
 
-            /* result metrics */
+        /* result metrics */
+        .result-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-top: 20px;
+        }
+
+        .metric-card {
+            background: rgba(255, 252, 248, 0.6);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            padding: 14px 8px;
+            text-align: center;
+        }
+
+        .metric-card .number {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: 1px;
+        }
+
+        .metric-card .number .percent {
+            font-size: 16px;
+            font-weight: 400;
+            color: var(--text-muted);
+        }
+
+        .metric-card .label {
+            font-size: 12px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        .metric-card.gold .number {
+            color: var(--accent-gold);
+        }
+
+        @media (max-width: 480px) {
             .result-metrics {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 14px;
-                margin-top: 20px;
-            }
-
-            .metric-card {
-                background: rgba(255, 252, 248, 0.6);
-                border: 1px solid var(--border-light);
-                border-radius: var(--radius-sm);
-                padding: 14px 8px;
-                text-align: center;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 8px;
             }
 
             .metric-card .number {
-                font-size: 26px;
-                font-weight: 700;
-                color: var(--text-primary);
-                letter-spacing: 1px;
+                font-size: 20px;
             }
+        }
 
-            .metric-card .number .percent {
-                font-size: 16px;
-                font-weight: 400;
-                color: var(--text-muted);
-            }
+        /* prompt toggle */
+        .prompt-toggle {
+            margin-top: 16px;
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            background: rgba(255, 252, 248, 0.4);
+            font-family: var(--font-serif);
+            font-size: 14px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition:
+                background var(--transition),
+                border-color var(--transition);
+        }
 
-            .metric-card .label {
-                font-size: 12px;
-                color: var(--text-muted);
-                letter-spacing: 1px;
-                margin-top: 2px;
-            }
+        .prompt-toggle:hover {
+            background: rgba(255, 252, 248, 0.7);
+            border-color: var(--border-active);
+        }
 
-            .metric-card.gold .number {
-                color: var(--accent-gold);
-            }
+        .prompt-content {
+            margin-top: 12px;
+            padding: 18px 20px;
+            border-radius: var(--radius-sm);
+            background: rgba(255, 252, 248, 0.5);
+            border: 1px solid var(--border-light);
+            font-size: 13px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
 
-            @media (max-width: 480px) {
-                .result-metrics {
-                    grid-template-columns: 1fr 1fr 1fr;
-                    gap: 8px;
-                }
-                .metric-card .number {
-                    font-size: 20px;
-                }
-            }
+        .prompt-content.open {
+            display: block;
+            animation: fadeSlide 0.3s ease;
+        }
 
-            /* prompt toggle */
-            .prompt-toggle {
-                margin-top: 16px;
-                width: 100%;
-                padding: 12px 16px;
-                border: 1px solid var(--border-light);
-                border-radius: var(--radius-sm);
-                background: rgba(255, 252, 248, 0.4);
-                font-family: var(--font-serif);
-                font-size: 14px;
-                color: var(--text-secondary);
-                cursor: pointer;
-                transition:
-                    background var(--transition),
-                    border-color var(--transition);
-            }
-
-            .prompt-toggle:hover {
-                background: rgba(255, 252, 248, 0.7);
-                border-color: var(--border-active);
-            }
-
-            .prompt-content {
-                margin-top: 12px;
-                padding: 18px 20px;
-                border-radius: var(--radius-sm);
-                background: rgba(255, 252, 248, 0.5);
-                border: 1px solid var(--border-light);
-                font-size: 13px;
-                line-height: 1.8;
-                color: var(--text-secondary);
-                white-space: pre-wrap;
-                max-height: 300px;
-                overflow-y: auto;
-                display: none;
-            }
-
-            .prompt-content.open {
-                display: block;
-                animation: fadeSlide 0.3s ease;
-            }
-
-            /* ============================================================
+        /* ============================================================
                9. Utilities & Responsive
                ============================================================ */
-            @media (max-width: 600px) {
-                .header h1 {
-                    font-size: 30px;
-                    letter-spacing: 8px;
-                }
-                .header .sub {
-                    font-size: 12px;
-                    letter-spacing: 6px;
-                }
-                .style-grid {
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 8px;
-                }
-                .style-option {
-                    font-size: 13px;
-                    padding: 8px 4px;
-                }
-                .style-option .emoji {
-                    font-size: 18px;
-                }
-                .upload-area {
-                    padding: 28px 12px 24px;
-                }
-                .upload-area .primary-text {
-                    font-size: 16px;
-                }
-                .submit-btn {
-                    font-size: 17px;
-                    letter-spacing: 4px;
-                    padding: 16px 12px;
-                }
-                .step-item .label {
-                    font-size: 11px;
-                }
-                .step-item .dot {
-                    width: 30px;
-                    height: 30px;
-                    font-size: 13px;
-                }
-                .progress-steps::before,
-                .progress-steps .step-line {
-                    top: 15px;
-                    left: 20px;
-                    right: 20px;
-                }
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 30px;
+                letter-spacing: 8px;
             }
 
-            @media (max-width: 400px) {
-                .style-grid {
-                    grid-template-columns: repeat(2, 1fr);
-                }
-                .container {
-                    padding: 20px 12px 18px;
-                }
+            .header .sub {
+                font-size: 12px;
+                letter-spacing: 6px;
             }
 
-            /* scrollbar */
-            .prompt-content::-webkit-scrollbar {
-                width: 4px;
+            .style-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
             }
-            .prompt-content::-webkit-scrollbar-track {
-                background: transparent;
+
+            .style-option {
+                font-size: 13px;
+                padding: 8px 4px;
             }
-            .prompt-content::-webkit-scrollbar-thumb {
-                background: var(--border-light);
-                border-radius: 4px;
+
+            .style-option .emoji {
+                font-size: 18px;
             }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <!-- ========== HEADER ========== -->
-            <header class="header">
-                <span class="header-icon">🖌️</span>
-                <h1>字 相</h1>
-                <div class="sub">字 即 是 相 · 相 即 是 字</div>
-                <div class="brush-line"></div>
-            </header>
 
-            <!-- ========== FORM ========== -->
-            <form id="mainForm">
-                <!-- Upload -->
-                <div class="upload-area" id="uploadArea">
-                    <span class="icon-big">🖼️</span>
-                    <div class="primary-text">点击上传或拖拽图片</div>
-                    <div class="hint-text">支持 JPG / PNG / WEBP</div>
-                    <input type="file" id="fileInput" accept="image/*" />
-                    <img class="preview-img" id="previewImg" alt="预览" />
-                    <div class="file-name" id="fileName"></div>
-                </div>
+            .upload-area {
+                padding: 28px 12px 24px;
+            }
 
-                <!-- Name -->
-                <div class="form-group">
-                    <label for="nameInput">📝 姓名</label>
-                    <input
-                        class="input-line"
-                        id="nameInput"
-                        type="text"
-                        placeholder="请输入姓名，如：李白"
-                        autocomplete="off"
-                    />
-                </div>
+            .upload-area .primary-text {
+                font-size: 16px;
+            }
 
-                <!-- Style -->
-                <div class="form-group">
-                    <label>🎨 艺术风格</label>
-                    <div class="style-grid" id="styleGrid">
-                        <div class="style-option active" data-style="中国水墨">
-                            <span class="emoji">🀆</span>水墨
-                        </div>
-                        <div class="style-option" data-style="工笔画">
-                            <span class="emoji">🌸</span>工笔
-                        </div>
-                        <div class="style-option" data-style="油画">
-                            <span class="emoji">🖼️</span>油画
-                        </div>
-                        <div class="style-option" data-style="赛博朋克">
-                            <span class="emoji">🌆</span>赛博朋克
-                        </div>
-                        <div class="style-option" data-style="浮世绘">
-                            <span class="emoji">🌊</span>浮世绘
-                        </div>
-                        <div class="style-option" data-style="印象派">
-                            <span class="emoji">☀️</span>印象派
-                        </div>
+            .submit-btn {
+                font-size: 17px;
+                letter-spacing: 4px;
+                padding: 16px 12px;
+            }
+
+            .step-item .label {
+                font-size: 11px;
+            }
+
+            .step-item .dot {
+                width: 30px;
+                height: 30px;
+                font-size: 13px;
+            }
+
+            .progress-steps::before,
+            .progress-steps .step-line {
+                top: 15px;
+                left: 20px;
+                right: 20px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .style-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .container {
+                padding: 20px 12px 18px;
+            }
+        }
+
+        /* scrollbar */
+        .prompt-content::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .prompt-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .prompt-content::-webkit-scrollbar-thumb {
+            background: var(--border-light);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- ========== HEADER ========== -->
+        <header class="header">
+            <span class="header-icon">🖌️</span>
+            <h1>字 相</h1>
+            <div class="sub">字 即 是 相 · 相 即 是 字</div>
+            <div class="brush-line"></div>
+        </header>
+
+        <section class="connection-panel" aria-label="API 配置">
+            <div>
+                <label for="apiKeyInput">API Key</label>
+                <input id="apiKeyInput" type="password" placeholder="输入后保存到本地服务" autocomplete="off" />
+            </div>
+            <div>
+                <label for="apiBaseInput">API Base URL（可选）</label>
+                <input id="apiBaseInput" type="url" placeholder="https://api.openai.com/v1" autocomplete="off" />
+            </div>
+            <button class="config-btn" id="configBtn" type="button">保存配置</button>
+            <div class="connection-status" id="connectionStatus">正在检查本地服务...</div>
+        </section>
+
+        <!-- ========== FORM ========== -->
+        <form id="mainForm">
+            <!-- Upload -->
+            <div class="upload-area" id="uploadArea">
+                <span class="icon-big">🖼️</span>
+                <div class="primary-text">点击上传或拖拽图片</div>
+                <div class="hint-text">支持 JPG / PNG / WEBP</div>
+                <input type="file" id="fileInput" accept="image/*" />
+                <img class="preview-img" id="previewImg" alt="预览" />
+                <div class="file-name" id="fileName"></div>
+            </div>
+
+            <!-- Name -->
+            <div class="form-group">
+                <label for="nameInput">📝 姓名</label>
+                <input class="input-line" id="nameInput" type="text" placeholder="请输入姓名，如：李白" autocomplete="off" />
+            </div>
+
+            <!-- Style -->
+            <div class="form-group">
+                <label>🎨 艺术风格</label>
+                <div class="style-grid" id="styleGrid">
+                    <div class="style-option active" data-style="中国水墨">
+                        <span class="emoji">🀆</span>水墨
                     </div>
-                </div>
-
-                <!-- Submit -->
-                <div class="submit-wrap">
-                    <button type="submit" class="submit-btn" id="submitBtn">
-                        <span class="btn-text">✨ 开始创作</span>
-                        <div class="spinner"></div>
-                    </button>
-                </div>
-            </form>
-
-            <!-- ========== PROGRESS ========== -->
-            <div class="progress-section" id="progressSection">
-                <div class="progress-steps" id="progressSteps">
-                    <div
-                        class="step-line"
-                        id="stepLine"
-                        style="width: 0%"
-                    ></div>
-
-                    <div class="step-item pending" data-step="1">
-                        <div class="dot">1</div>
-                        <div class="label">分析面部</div>
+                    <div class="style-option" data-style="工笔画">
+                        <span class="emoji">🌸</span>工笔
                     </div>
-                    <div class="step-item pending" data-step="2">
-                        <div class="dot">2</div>
-                        <div class="label">解析姓名</div>
+                    <div class="style-option" data-style="油画">
+                        <span class="emoji">🖼️</span>油画
                     </div>
-                    <div class="step-item pending" data-step="3">
-                        <div class="dot">3</div>
-                        <div class="label">融合构图</div>
+                    <div class="style-option" data-style="赛博朋克">
+                        <span class="emoji">🌆</span>赛博朋克
                     </div>
-                    <div class="step-item pending" data-step="4">
-                        <div class="dot">4</div>
-                        <div class="label">生成作品</div>
+                    <div class="style-option" data-style="浮世绘">
+                        <span class="emoji">🌊</span>浮世绘
+                    </div>
+                    <div class="style-option" data-style="印象派">
+                        <span class="emoji">☀️</span>印象派
                     </div>
                 </div>
             </div>
 
-            <!-- ========== RESULT ========== -->
-            <div class="result-section" id="resultSection">
-                <div class="result-image-wrap">
-                    <img
-                        id="resultImage"
-                        src=""
-                        alt="生成的艺术肖像"
-                        style="display: none"
-                    />
-                    <div class="placeholder" id="resultPlaceholder">
-                        🎨 作品将在此呈现
-                    </div>
-                </div>
-
-                <div class="result-metrics">
-                    <div class="metric-card">
-                        <div class="number" id="metricFace">—</div>
-                        <div class="label">面部匹配</div>
-                    </div>
-                    <div class="metric-card gold">
-                        <div class="number" id="metricName">—</div>
-                        <div class="label">姓名融合</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="number" id="metricTotal">—</div>
-                        <div class="label">综合评分</div>
-                    </div>
-                </div>
-
-                <button class="prompt-toggle" id="promptToggle">
-                    📜 查看生成构思
+            <!-- Submit -->
+            <div class="submit-wrap">
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <span class="btn-text">✨ 开始创作</span>
+                    <div class="spinner"></div>
                 </button>
-                <div class="prompt-content" id="promptContent"></div>
+            </div>
+        </form>
+
+        <!-- ========== PROGRESS ========== -->
+        <div class="progress-section" id="progressSection">
+            <div class="progress-steps" id="progressSteps">
+                <div class="step-line" id="stepLine" style="width: 0%"></div>
+
+                <div class="step-item pending" data-step="1">
+                    <div class="dot">1</div>
+                    <div class="label">分析面部</div>
+                </div>
+                <div class="step-item pending" data-step="2">
+                    <div class="dot">2</div>
+                    <div class="label">解析姓名</div>
+                </div>
+                <div class="step-item pending" data-step="3">
+                    <div class="dot">3</div>
+                    <div class="label">融合构图</div>
+                </div>
+                <div class="step-item pending" data-step="4">
+                    <div class="dot">4</div>
+                    <div class="label">生成作品</div>
+                </div>
             </div>
         </div>
 
-        <script>
-            /* ================================================================
-           UI 交互逻辑
-           ================================================================ */
+        <!-- ========== RESULT ========== -->
+        <div class="result-section" id="resultSection">
+            <div class="result-image-wrap">
+                <img id="resultImage" src="" alt="生成的艺术肖像" style="display: none" />
+                <div class="placeholder" id="resultPlaceholder">
+                    🎨 作品将在此呈现
+                </div>
+            </div>
 
-            // ---------- DOM refs ----------
-            const uploadArea = document.getElementById("uploadArea");
-            const fileInput = document.getElementById("fileInput");
-            const previewImg = document.getElementById("previewImg");
-            const fileName = document.getElementById("fileName");
-            const nameInput = document.getElementById("nameInput");
-            const styleGrid = document.getElementById("styleGrid");
-            const submitBtn = document.getElementById("submitBtn");
-            const progressSection = document.getElementById("progressSection");
-            const stepItems = document.querySelectorAll(".step-item");
-            const stepLine = document.getElementById("stepLine");
-            const resultSection = document.getElementById("resultSection");
-            const resultImage = document.getElementById("resultImage");
-            const resultPlaceholder =
-                document.getElementById("resultPlaceholder");
-            const promptToggle = document.getElementById("promptToggle");
-            const promptContent = document.getElementById("promptContent");
+            <button class="prompt-toggle" id="promptToggle">
+                📜 查看生成构思
+            </button>
+            <div class="prompt-content" id="promptContent"></div>
+        </div>
 
-            // metric elements
-            const metricFace = document.getElementById("metricFace");
-            const metricName = document.getElementById("metricName");
-            const metricTotal = document.getElementById("metricTotal");
+        <section class="agent-output" id="agentOutput">
+            <div class="output-block" id="faceOutput" hidden>
+                <h3>面部特征</h3>
+                <pre id="faceContent"></pre>
+            </div>
+            <div class="output-block" id="nameOutput" hidden>
+                <h3>姓名汉字视觉信息</h3>
+                <pre id="nameContent"></pre>
+            </div>
+            <div class="output-block" id="planOutput" hidden>
+                <h3>构图计划</h3>
+                <dl id="planContent"></dl>
+            </div>
+        </section>
+    </div>
 
-            // ---------- Upload ----------
-            let uploadedFile = null;
+    <script>
+        /* ================================================================
+       UI 交互逻辑
+       ================================================================ */
 
-            function handleFile(file) {
-                if (!file || !file.type.startsWith("image/")) {
-                    alert("请上传图片文件");
-                    return;
-                }
-                uploadedFile = file;
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    previewImg.src = e.target.result;
-                    previewImg.classList.add("visible");
-                    fileName.textContent = file.name;
-                    fileName.classList.add("visible");
-                    // hide hint text
-                    const hint = uploadArea.querySelector(".hint-text");
-                    if (hint) hint.style.display = "none";
-                    const primary = uploadArea.querySelector(".primary-text");
-                    if (primary) primary.textContent = "✅ 已上传";
-                };
-                reader.readAsDataURL(file);
-            }
+        // ---------- DOM refs ----------
+        const uploadArea = document.getElementById("uploadArea");
+        const fileInput = document.getElementById("fileInput");
+        const previewImg = document.getElementById("previewImg");
+        const fileName = document.getElementById("fileName");
+        const nameInput = document.getElementById("nameInput");
+        const styleGrid = document.getElementById("styleGrid");
+        const submitBtn = document.getElementById("submitBtn");
+        const progressSection = document.getElementById("progressSection");
+        const stepItems = document.querySelectorAll(".step-item");
+        const stepLine = document.getElementById("stepLine");
+        const resultSection = document.getElementById("resultSection");
+        const resultImage = document.getElementById("resultImage");
+        const resultPlaceholder =
+            document.getElementById("resultPlaceholder");
+        const promptToggle = document.getElementById("promptToggle");
+        const promptContent = document.getElementById("promptContent");
+        const apiKeyInput = document.getElementById("apiKeyInput");
+        const apiBaseInput = document.getElementById("apiBaseInput");
+        const configBtn = document.getElementById("configBtn");
+        const connectionStatus = document.getElementById("connectionStatus");
+        const agentOutput = document.getElementById("agentOutput");
+        const faceOutput = document.getElementById("faceOutput");
+        const nameOutput = document.getElementById("nameOutput");
+        const planOutput = document.getElementById("planOutput");
+        const faceContent = document.getElementById("faceContent");
+        const nameContent = document.getElementById("nameContent");
+        const planContent = document.getElementById("planContent");
 
-            uploadArea.addEventListener("click", () => fileInput.click());
+        function setConnectionStatus(text, state = "") {
+            connectionStatus.textContent = text;
+            connectionStatus.className = "connection-status" + (state ? ` ${state}` : "");
+        }
 
-            uploadArea.addEventListener("dragover", (e) => {
-                e.preventDefault();
-                uploadArea.classList.add("dragover");
-            });
-            uploadArea.addEventListener("dragleave", () => {
-                uploadArea.classList.remove("dragover");
-            });
-            uploadArea.addEventListener("drop", (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove("dragover");
-                if (e.dataTransfer.files.length) {
-                    fileInput.files = e.dataTransfer.files;
-                    handleFile(e.dataTransfer.files[0]);
-                }
-            });
-
-            fileInput.addEventListener("change", () => {
-                if (fileInput.files.length) {
-                    handleFile(fileInput.files[0]);
-                }
-            });
-
-            // ---------- Style selector ----------
-            styleGrid.addEventListener("click", (e) => {
-                const opt = e.target.closest(".style-option");
-                if (!opt) return;
-                document
-                    .querySelectorAll(".style-option")
-                    .forEach((el) => el.classList.remove("active"));
-                opt.classList.add("active");
-            });
-
-            // ---------- Progress helpers ----------
-            function resetProgress() {
-                stepItems.forEach((el) => {
-                    el.className = "step-item pending";
-                    el.querySelector(".dot").textContent = el.dataset.step;
-                });
-                stepLine.style.width = "0%";
-                progressSection.classList.remove("active");
-            }
-
-            function showProgress() {
-                progressSection.classList.add("active");
-                stepItems.forEach((el) => {
-                    el.className = "step-item pending";
-                    el.querySelector(".dot").textContent = el.dataset.step;
-                });
-                stepLine.style.width = "0%";
-            }
-
-            function updateStep(step, status) {
-                const el = document.querySelector(
-                    `.step-item[data-step="${step}"]`,
-                );
-                if (!el) return;
-                const dot = el.querySelector(".dot");
-                el.className = "step-item";
-                if (status === "done") {
-                    el.classList.add("done");
-                    dot.textContent = "✓";
-                } else if (status === "active") {
-                    el.classList.add("active");
-                    dot.textContent = "⟳";
+        async function refreshStatus() {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 5000);
+            try {
+                const response = await fetch("/api/status", { signal: controller.signal });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                if (data.configured) {
+                    const models = data.models || {};
+                    setConnectionStatus(
+                        `服务已连接 · ${models.vision_model || "视觉模型"} / ${models.text_model || "文本模型"} / ${models.image_model || "图片模型"}`,
+                        "ready",
+                    );
+                    apiBaseInput.value = models.base_url || "";
                 } else {
-                    el.classList.add("pending");
-                    dot.textContent = step;
+                    setConnectionStatus("服务已连接 · 请先配置 API Key", "error");
                 }
-                // update line width
-                const total = stepItems.length;
-                const done =
-                    document.querySelectorAll(".step-item.done").length;
-                const active = document.querySelector(".step-item.active")
-                    ? 1
-                    : 0;
-                const progress = ((done + (active ? 0.5 : 0)) / total) * 100;
-                stepLine.style.width = Math.min(progress, 100) + "%";
+            } catch (error) {
+                setConnectionStatus("无法连接本地服务，请使用 Web 服务模式启动项目", "error");
+            } finally {
+                clearTimeout(timeout);
             }
+        }
 
-            // ---------- 评分计算 ----------
-            function computeScores(data) {
-                // 面部特征匹配度：基于气质关键词数量
-                let faceScore = 85;
-                if (data.face && data.face.overall_vibe) {
-                    faceScore = 80 + data.face.overall_vibe.length * 4;
-                }
-                // 姓名元素融合度：基于汉字笔画总数
-                let nameScore = 85;
-                if (data.name_vis && data.name_vis.length > 0) {
-                    const totalStrokes = data.name_vis.reduce(
-                        (sum, cv) => sum + (cv.stroke_count || 0),
-                        0,
-                    );
-                    nameScore = 78 + Math.min(totalStrokes, 30);
-                }
-                // 视觉元素加分
-                if (data.name_vis) {
-                    const hasVisuals = data.name_vis.some(
-                        (cv) =>
-                            cv.visual_elements && cv.visual_elements.length > 0,
-                    );
-                    if (hasVisuals) nameScore += 3;
-                }
-                faceScore = Math.min(faceScore, 99);
-                nameScore = Math.min(nameScore, 99);
-                const total = Math.round(faceScore * 0.4 + nameScore * 0.6);
-                return {
-                    face: faceScore,
-                    name: nameScore,
-                    total,
-                };
+        configBtn.addEventListener("click", async () => {
+            const apiKey = apiKeyInput.value.trim();
+            if (!apiKey) {
+                setConnectionStatus("请输入 API Key", "error");
+                apiKeyInput.focus();
+                return;
             }
-
-            function sleep(ms) {
-                return new Promise((r) => setTimeout(r, ms));
+            configBtn.disabled = true;
+            setConnectionStatus("正在保存配置...");
+            try {
+                const response = await fetch("/api/config", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        api_key: apiKey,
+                        api_base: apiBaseInput.value.trim() || null,
+                    }),
+                });
+                const message = await response.text();
+                if (!response.ok) throw new Error(message);
+                apiKeyInput.value = "";
+                await refreshStatus();
+            } catch (error) {
+                setConnectionStatus(`配置失败：${error.message}`, "error");
+            } finally {
+                configBtn.disabled = false;
             }
+        });
 
-            // ---------- Form submit ----------
-            const mainForm = document.getElementById("mainForm");
+        // ---------- Upload ----------
+        let uploadedFile = null;
 
-            mainForm.addEventListener("submit", async (e) => {
-                e.preventDefault();
+        function handleFile(file) {
+            if (!file || !file.type.startsWith("image/")) {
+                alert("请上传图片文件");
+                return;
+            }
+            uploadedFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                previewImg.classList.add("visible");
+                fileName.textContent = file.name;
+                fileName.classList.add("visible");
+                // hide hint text
+                const hint = uploadArea.querySelector(".hint-text");
+                if (hint) hint.style.display = "none";
+                const primary = uploadArea.querySelector(".primary-text");
+                if (primary) primary.textContent = "✅ 已上传";
+            };
+            reader.readAsDataURL(file);
+        }
 
-                const name = nameInput.value.trim();
-                if (!name) {
-                    alert("请输入姓名");
-                    nameInput.focus();
-                    return;
-                }
-                if (!uploadedFile) {
-                    alert("请上传人物照片");
-                    return;
-                }
+        uploadArea.addEventListener("click", () => fileInput.click());
 
-                const styleEl = document.querySelector(".style-option.active");
-                const style = styleEl ? styleEl.dataset.style : "中国水墨";
+        uploadArea.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            uploadArea.classList.add("dragover");
+        });
+        uploadArea.addEventListener("dragleave", () => {
+            uploadArea.classList.remove("dragover");
+        });
+        uploadArea.addEventListener("drop", (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove("dragover");
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
 
-                // read file as base64
-                let imageBase64;
-                try {
-                    imageBase64 = await new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload = (e) => resolve(e.target.result);
-                        reader.onerror = reject;
-                        reader.readAsDataURL(uploadedFile);
+        fileInput.addEventListener("change", () => {
+            if (fileInput.files.length) {
+                handleFile(fileInput.files[0]);
+            }
+        });
+
+        // ---------- Style selector ----------
+        styleGrid.addEventListener("click", (e) => {
+            const opt = e.target.closest(".style-option");
+            if (!opt) return;
+            document
+                .querySelectorAll(".style-option")
+                .forEach((el) => el.classList.remove("active"));
+            opt.classList.add("active");
+        });
+
+        // ---------- Progress helpers ----------
+        function resetProgress() {
+            stepItems.forEach((el) => {
+                el.className = "step-item pending";
+                el.querySelector(".dot").textContent = el.dataset.step;
+            });
+            stepLine.style.width = "0%";
+            progressSection.classList.remove("active");
+        }
+
+        function showProgress() {
+            progressSection.classList.add("active");
+            stepItems.forEach((el) => {
+                el.className = "step-item pending";
+                el.querySelector(".dot").textContent = el.dataset.step;
+            });
+            stepLine.style.width = "0%";
+        }
+
+        function updateStep(step, status) {
+            const el = document.querySelector(
+                `.step-item[data-step="${step}"]`,
+            );
+            if (!el) return;
+            const dot = el.querySelector(".dot");
+            el.className = "step-item";
+            if (status === "done") {
+                el.classList.add("done");
+                dot.textContent = "✓";
+            } else if (status === "active") {
+                el.classList.add("active");
+                dot.textContent = "⟳";
+            } else {
+                el.classList.add("pending");
+                dot.textContent = step;
+            }
+            // update line width
+            const total = stepItems.length;
+            const done =
+                document.querySelectorAll(".step-item.done").length;
+            const active = document.querySelector(".step-item.active")
+                ? 1
+                : 0;
+            const progress = ((done + (active ? 0.5 : 0)) / total) * 100;
+            stepLine.style.width = Math.min(progress, 100) + "%";
+        }
+
+        function renderPlan(plan) {
+            planContent.replaceChildren();
+            Object.entries(plan).forEach(([key, value]) => {
+                const label = document.createElement("dt");
+                const content = document.createElement("dd");
+                label.textContent = key;
+                content.textContent = Array.isArray(value) ? value.join("、") : value;
+                planContent.append(label, content);
+            });
+        }
+
+        function resetOutputs() {
+            agentOutput.classList.remove("active");
+            [faceOutput, nameOutput, planOutput].forEach((el) => { el.hidden = true; });
+            faceContent.textContent = "";
+            nameContent.textContent = "";
+            planContent.replaceChildren();
+        }
+
+        function handlePipelineEvent(eventName, rawData) {
+            if (eventName === "step") {
+                const event = JSON.parse(rawData);
+                updateStep(event.step, event.status);
+            } else if (eventName === "face") {
+                faceContent.textContent = JSON.stringify(JSON.parse(rawData), null, 2);
+                faceOutput.hidden = false;
+                agentOutput.classList.add("active");
+            } else if (eventName === "name_vis") {
+                nameContent.textContent = JSON.stringify(JSON.parse(rawData), null, 2);
+                nameOutput.hidden = false;
+                agentOutput.classList.add("active");
+            } else if (eventName === "plan") {
+                renderPlan(JSON.parse(rawData));
+                planOutput.hidden = false;
+                agentOutput.classList.add("active");
+            } else if (eventName === "prompt") {
+                promptContent.textContent = rawData;
+            } else if (eventName === "image") {
+                resultImage.src = rawData;
+                resultImage.style.display = "block";
+                resultPlaceholder.style.display = "none";
+            } else if (eventName === "error") {
+                throw new Error(rawData);
+            }
+        }
+
+        async function consumeSse(response) {
+            if (!response.body) throw new Error("服务器没有返回流式响应");
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+            while (true) {
+                const { value, done } = await reader.read();
+                buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+                const frames = buffer.split("\n\n");
+                buffer = frames.pop();
+                for (const frame of frames) {
+                    let eventName = "message";
+                    const dataLines = [];
+                    frame.split("\n").forEach((line) => {
+                        if (line.startsWith("event:")) eventName = line.slice(6).trim();
+                        if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
                     });
-                } catch (err) {
-                    alert("读取图片失败：" + err.message);
-                    return;
+                    if (dataLines.length) handlePipelineEvent(eventName, dataLines.join("\n"));
+                }
+                if (done) break;
+            }
+        }
+
+        // ---------- Form submit ----------
+        const mainForm = document.getElementById("mainForm");
+
+        mainForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const name = nameInput.value.trim();
+            if (!name) {
+                alert("请输入姓名");
+                nameInput.focus();
+                return;
+            }
+            if (!uploadedFile) {
+                alert("请上传人物照片");
+                return;
+            }
+
+            const styleEl = document.querySelector(".style-option.active");
+            const style = styleEl ? styleEl.dataset.style : "中国水墨";
+
+            // read file as base64
+            let imageBase64;
+            try {
+                imageBase64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(uploadedFile);
+                });
+            } catch (err) {
+                alert("读取图片失败：" + err.message);
+                return;
+            }
+
+            // UI: loading state
+            submitBtn.disabled = true;
+            submitBtn.classList.add("loading");
+            resultSection.classList.remove("active");
+            resultImage.removeAttribute("src");
+            resultImage.style.display = "none";
+            resultPlaceholder.style.display = "flex";
+            resultPlaceholder.textContent = "🎨 作品将在此呈现";
+            resetOutputs();
+            resetProgress();
+            showProgress();
+
+            try {
+                const payload = { name, image: imageBase64, style };
+                const response = await fetch("/api/generate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(
+                        `服务器错误 (${response.status}): ${errText}`,
+                    );
                 }
 
-                // UI: loading state
-                submitBtn.disabled = true;
-                submitBtn.classList.add("loading");
-                resultSection.classList.remove("active");
+                await consumeSse(response);
+                promptContent.classList.remove("open");
+                promptToggle.textContent = "📜 查看生成构思";
+
+                resultSection.classList.add("active");
+            } catch (err) {
+                alert("生成失败：" + err.message);
                 resetProgress();
-                showProgress();
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove("loading");
+            }
+        });
 
-                try {
-                    // Step 1: 分析面部
-                    updateStep(1, "active");
-                    await sleep(300);
+        // ---------- Prompt toggle ----------
+        promptToggle.addEventListener("click", () => {
+            const isOpen = promptContent.classList.toggle("open");
+            promptToggle.textContent = isOpen
+                ? "📜 收起构思"
+                : "📜 查看生成构思";
+        });
+    </script>
+</body>
 
-                    const payload = { name, image: imageBase64, style };
-                    const isServer = location.protocol.startsWith("http");
-                    const endpoint = isServer ? "/api/generate" : "/generate";
-
-                    const response = await fetch(endpoint, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload),
-                    });
-
-                    if (!response.ok) {
-                        const errText = await response.text();
-                        throw new Error(
-                            `服务器错误 (${response.status}): ${errText}`,
-                        );
-                    }
-
-                    const data = await response.json();
-                    updateStep(1, "done");
-
-                    // 模拟后续步骤（后端 Agent 会实际执行，前端展示进度）
-                    updateStep(2, "active");
-                    await sleep(500);
-                    updateStep(2, "done");
-
-                    updateStep(3, "active");
-                    await sleep(500);
-                    updateStep(3, "done");
-
-                    updateStep(4, "active");
-                    await sleep(600);
-                    updateStep(4, "done");
-
-                    // 显示结果
-                    if (data.image_url) {
-                        resultImage.src = data.image_url;
-                        resultImage.style.display = "block";
-                        resultPlaceholder.style.display = "none";
-                    } else if (data.image_base64) {
-                        resultImage.src = data.image_base64;
-                        resultImage.style.display = "block";
-                        resultPlaceholder.style.display = "none";
-                    } else {
-                        // fallback: 显示占位
-                        resultImage.style.display = "none";
-                        resultPlaceholder.style.display = "flex";
-                        resultPlaceholder.textContent =
-                            "⚠️ 未返回图片，请检查 API 配置";
-                    }
-
-                    // 更新评分
-                    const scores = computeScores(data);
-                    metricFace.textContent = scores.face + "%";
-                    metricName.textContent = scores.name + "%";
-                    metricTotal.textContent = scores.total + "%";
-
-                    // 显示 prompt
-                    promptContent.textContent =
-                        data.prompt || "（无 Prompt 信息）";
-                    promptContent.classList.remove("open");
-                    promptToggle.textContent = "📜 查看生成构思";
-
-                    resultSection.classList.add("active");
-                } catch (err) {
-                    alert("生成失败：" + err.message);
-                    resetProgress();
-                } finally {
-                    submitBtn.disabled = false;
-                    submitBtn.classList.remove("loading");
-                }
-            });
-
-            // ---------- Prompt toggle ----------
-            promptToggle.addEventListener("click", () => {
-                const isOpen = promptContent.classList.toggle("open");
-                promptToggle.textContent = isOpen
-                    ? "📜 收起构思"
-                    : "📜 查看生成构思";
-            });
-        </script>
-    </body>
 </html>

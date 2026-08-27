@@ -212,7 +212,7 @@ cargo run --release -- serve 8080     # 指定端口
 
 启动后访问 `http://127.0.0.1:3000`：拖拽上传照片 → 输入姓名 → 选画风 → 点「开始创作」。前端会把照片（data URL）、姓名、画风 POST 到 `/api/generate`，后端运行完整四步 pipeline 返回真实 Prompt 与图片。
 
-> 直接用浏览器打开 `static/index.html`（`file://`）则进入**离线演示模式**，无需 API Key。
+> 请通过上面的 Web 服务地址访问 UI。直接打开 `static/index.html`（`file://`）不会连接后端，也不能运行真实 Agent 流程。
 
 ## 环境变量配置
 

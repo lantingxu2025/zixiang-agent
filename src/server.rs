@@ -1,8 +1,11 @@
 //! axum Web 服务
 //!
-//! 托管 `static/` 前端页面，并提供 `POST /api/generate` 接口
-//! 对接真实的 Agent pipeline。
+//! 托管 `static/` 前端页面，提供完整的控制台 API：
+//! - `GET  /api/status`   — 检查服务状态、API Key 配置情况与当前模型名
+//! - `POST /api/config`    — 在网页中写入 / 更新 API Key（无需手动编辑 .env）
+//! - `POST /api/generate` — 以 SSE 流式运行完整 pipeline，逐步推送真实进度
 
+use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -11,59 +14,87 @@ use axum::{
     Json, Router,
     extract::State,
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Response, sse::{Event, Sse, KeepAlive}},
     routing::{get, post},
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
+use tokio_stream::StreamExt;
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
-use crate::agent::agent_loop::run_pipeline;
+use crate::agent::agent_loop::{PipelineEvent, run_pipeline_stream};
 use crate::config::Config;
-use crate::types::{CompositionPlan, FaceFeatures, NameVisuals};
+
+// ---------------------------------------------------------------------------
+// 请求结构体
+// ---------------------------------------------------------------------------
 
 /// 前端生成请求
 #[derive(Debug, Deserialize)]
 pub struct GenerateRequest {
-    /// 被分析者的中文姓名
     pub name: String,
-    /// 人物照片的 data URL（FileReader 读取的结果）
+    /// data URL（FileReader 读取的结果）
     pub image: String,
-    /// 画风描述，如 "水墨"、"工笔"
     pub style: String,
 }
 
-/// 后端生成响应
-#[derive(Debug, Serialize)]
-pub struct GenerateResponse {
-    /// 浏览器可直接显示的图片地址（URL 或 data URL）
-    pub image_url: String,
-    /// 生成的完整 Prompt
-    pub prompt: String,
-    /// 面部特征分析结果
-    pub face: FaceFeatures,
-    /// 构图计划
-    pub plan: CompositionPlan,
-    /// 姓名汉字视觉信息
-    pub name_vis: NameVisuals,
+/// 配置请求：前端提交 API Key
+#[derive(Debug, Deserialize)]
+pub struct ConfigRequest {
+    pub api_key: String,
+    /// 可选：API 基础地址
+    pub api_base: Option<String>,
 }
 
-/// 应用状态
+// ---------------------------------------------------------------------------
+// 应用状态
+// ---------------------------------------------------------------------------
+
+/// 应用状态：运行时动态持有配置，支持网页端热更新
 #[derive(Clone)]
 pub struct AppState {
-    pub config: Option<Arc<Config>>,
+    /// Arc 内部可变，允许 handler 中替换
+    config: Arc<std::sync::RwLock<Option<Config>>>,
 }
 
-/// 将 pipeline 返回的图片"位置"（URL 或本地文件路径）转换为浏览器可显示的地址。
+impl AppState {
+    fn new() -> Self {
+        let config = Config::from_env().ok();
+        Self {
+            config: Arc::new(std::sync::RwLock::new(config)),
+        }
+    }
+
+    /// 获取当前配置的快照
+    fn get_config(&self) -> Option<Config> {
+        self.config.read().unwrap().clone()
+    }
+
+    /// 更新配置
+    fn set_config(&self, new: Config) {
+        *self.config.write().unwrap() = Some(new);
+    }
+
+    fn is_configured(&self) -> bool {
+        self.config.read().unwrap().is_some()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 工具函数
+// ---------------------------------------------------------------------------
+
+/// 将 pipeline 返回的图片"位置"转换为浏览器可显示的地址。
 ///
-/// - `http(s)://` → 原样返回
-/// - 本地文件路径 → 读取文件并编码为 data URL（米醋等 base64 中转场景）
+/// - `http(s)://` 开头视为 URL，原样返回
+/// - 否则视为本地文件路径，读取后编码为 data URL 返回
 fn normalize_for_browser(location: &str) -> String {
     if location.starts_with("http://") || location.starts_with("https://") {
         return location.to_string();
     }
-    // 本地 PNG 文件 → base64 data URL
     match std::fs::read(location) {
         Ok(bytes) => {
             use base64::Engine;
@@ -77,14 +108,39 @@ fn normalize_for_browser(location: &str) -> String {
     }
 }
 
-/// 定位 static 目录（开发时从工作目录找，发布后从可执行文件旁找）。
+/// 把 [`PipelineEvent`] 转为 SSE [`Event`]。
+///
+/// 每个事件用 `event:` 字段区分类型，`data:` 字段携带 JSON 或纯文本。
+fn event_from(ev: PipelineEvent) -> Event {
+    match ev {
+        PipelineEvent::Step { step, status } => Event::default()
+            .event("step")
+            .data(format!(r#"{{"step":{},"status":"{}"}}"#, step, status)),
+        PipelineEvent::Face(f) => Event::default()
+            .event("face")
+            .data(serde_json::to_string(&f).unwrap_or_else(|_| "{}".to_string())),
+        PipelineEvent::NameVis(n) => Event::default()
+            .event("name_vis")
+            .data(serde_json::to_string(&n).unwrap_or_else(|_| "[]".to_string())),
+        PipelineEvent::Plan(p) => Event::default()
+            .event("plan")
+            .data(serde_json::to_string(&p).unwrap_or_else(|_| "{}".to_string())),
+        PipelineEvent::Prompt(s) => Event::default().event("prompt").data(s),
+        PipelineEvent::Image(u) => {
+            // 图片路径规范化：本地文件转 data URL，远程 URL 原样
+            Event::default().event("image").data(normalize_for_browser(&u))
+        }
+        PipelineEvent::Error(msg) => Event::default().event("error").data(msg),
+        PipelineEvent::Done => Event::default().event("done").data(""),
+    }
+}
+
+/// 定位 static 目录
 fn locate_static_dir() -> Option<PathBuf> {
-    // 1. 当前工作目录下的 static/
     let cwd = PathBuf::from("static");
     if cwd.is_dir() {
         return Some(cwd);
     }
-    // 2. 可执行文件所在目录下的 static/
     if let Ok(exe) = std::env::current_exe() {
         if let Some(parent) = exe.parent() {
             let p = parent.join("static");
@@ -96,77 +152,199 @@ fn locate_static_dir() -> Option<PathBuf> {
     None
 }
 
-/// 健康检查接口
-async fn health(State(state): State<AppState>) -> impl IntoResponse {
-    let configured = state.config.is_some();
+/// 将 API Key 写入 .env 文件（保留已有内容，仅更新相关行）
+fn write_env_file(api_key: &str, api_base: Option<&str>) -> std::io::Result<()> {
+    let env_path = PathBuf::from(".env");
+    let existing = std::fs::read_to_string(&env_path).unwrap_or_default();
+
+    let mut lines: Vec<String> = existing
+        .lines()
+        .filter(|line| {
+            let trimmed = line.trim();
+            !trimmed.starts_with("OPENAI_API_KEY=")
+                && !trimmed.starts_with("API_KEY=")
+                && !trimmed.starts_with("API_BASE_URL=")
+                && !trimmed.starts_with("API_BASE=")
+        })
+        .map(String::from)
+        .collect();
+
+    // 在文件头部写入核心配置
+    lines.insert(0, format!("OPENAI_API_KEY={}", api_key));
+    if let Some(base) = api_base {
+        if !base.is_empty() {
+            lines.insert(1, format!("API_BASE_URL={}", base));
+        }
+    }
+
+    std::fs::write(&env_path, lines.join("\n") + "\n")
+}
+
+// ---------------------------------------------------------------------------
+// API Handlers
+// ---------------------------------------------------------------------------
+
+/// `GET /api/status` — 服务状态与配置检查
+///
+/// 返回是否已配置 API Key，以及当前各端点使用的模型名与 base url，
+/// 便于前端在配置卡片中展示。
+async fn status_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let cfg = state.get_config();
+    let (configured, models) = match cfg {
+        Some(c) => (
+            true,
+            serde_json::json!({
+                "vision_model": c.vision_model,
+                "text_model": c.text_model,
+                "image_model": c.image_model,
+                "image_size": c.image_size,
+                "base_url": c.vision.base_url,
+            }),
+        ),
+        None => (false, serde_json::Value::Null),
+    };
     Json(serde_json::json!({
         "status": "ok",
         "configured": configured,
+        "models": models,
     }))
 }
 
-/// 生成接口：运行完整 pipeline 并返回结果
-async fn generate_handler(
+/// `POST /api/config` — 在网页中设置 API Key，热更新配置
+async fn config_handler(
     State(state): State<AppState>,
-    Json(req): Json<GenerateRequest>,
+    Json(req): Json<ConfigRequest>,
 ) -> Response {
-    let config = match &state.config {
-        Some(c) => c.clone(),
-        None => {
-            return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                "未配置 API Key，请在 .env 中设置 OPENAI_API_KEY 后重启服务",
-            )
-                .into_response();
+    let api_key = req.api_key.trim();
+    if api_key.is_empty() {
+        return (StatusCode::BAD_REQUEST, "API Key 不能为空").into_response();
+    }
+
+    // 1. 写入 .env 文件
+    if let Err(e) = write_env_file(api_key, req.api_base.as_deref()) {
+        warn!("写入 .env 失败: {}", e);
+        // 文件写入失败不阻止流程，仍可在内存中生效
+    } else {
+        info!("API Key 已写入 .env");
+    }
+
+    // 2. 用新 Key 构造配置
+    // 注意：edition 2024 起 set_var 为 unsafe（多线程下修改全局环境有 UB 风险），
+    // 这里保持原有行为，用 unsafe 块包裹；运行时仅在配置热更新时调用，影响可控。
+    let config = match req.api_base {
+        Some(ref base) if !base.is_empty() => {
+            unsafe {
+                std::env::set_var("OPENAI_API_KEY", api_key);
+                std::env::set_var("API_BASE_URL", base);
+            }
+            Config::from_env()
+        }
+        _ => {
+            unsafe { std::env::set_var("OPENAI_API_KEY", api_key) };
+            Config::from_env()
         }
     };
 
-    info!("收到生成请求: 姓名={}, 画风={}", req.name, req.style);
-
-    match run_pipeline(&req.name, &req.image, &req.style, &config).await {
-        Ok(result) => {
-            let image_url = normalize_for_browser(&result.image_url);
-            let resp = GenerateResponse {
-                image_url,
-                prompt: result.prompt,
-                face: result.face,
-                plan: result.plan,
-                name_vis: result.name_vis,
-            };
-            Json(resp).into_response()
+    match config {
+        Ok(c) => {
+            state.set_config(c);
+            info!("API 配置热更新成功");
+            Json(serde_json::json!({
+                "success": true,
+                "message": "配置已保存并生效",
+            }))
+            .into_response()
         }
         Err(e) => {
-            error!("生成失败: {:#}", e);
+            error!("配置加载失败: {:#}", e);
             (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("生成失败: {:#}", e),
+                StatusCode::BAD_REQUEST,
+                format!("配置无效: {:#}", e),
             )
                 .into_response()
         }
     }
 }
 
-/// 启动 Web 服务。
+/// `POST /api/generate` — 以 SSE 流式运行完整 pipeline
 ///
-/// 即使未配置 API Key，也会启动以托管前端页面（离线演示模式可直接打开
-/// `static/index.html`，但通过服务器访问时前端会自动调用真实 API）。
+/// 响应 `Content-Type: text/event-stream`，逐步推送以下事件：
+/// - `step`   : `{"step":1..4,"status":"active"|"done"}`
+/// - `face`    : 面部特征 JSON
+/// - `name_vis`: 姓名汉字视觉信息 JSON
+/// - `plan`    : 构图计划 JSON
+/// - `prompt`  : 生成的 Prompt 文本
+/// - `image`   : 图片 URL 或 data URL
+/// - `error`   : 错误信息
+/// - `done`    : 全流程完成
+///
+/// 前端用 `fetch` + `ReadableStream` 读取并解析 SSE 帧。
+async fn generate_handler(
+    State(state): State<AppState>,
+    Json(req): Json<GenerateRequest>,
+) -> Response {
+    let config = match state.get_config() {
+        Some(c) => c,
+        None => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "尚未配置 API Key，请先在上方配置区填入密钥",
+            )
+                .into_response();
+        }
+    };
+
+    info!(
+        "收到生成请求: 姓名={}, 画风={}",
+        req.name, req.style
+    );
+
+    // pipeline 在后台 task 中运行，通过 mpsc channel 推送事件
+    let (tx, rx) = mpsc::channel::<PipelineEvent>(64);
+
+    let name = req.name;
+    let image = req.image;
+    let style = req.style;
+    tokio::spawn(async move {
+        let result = run_pipeline_stream(&name, &image, &style, &config, tx.clone()).await;
+        if let Err(e) = result {
+            let _ = tx.send(PipelineEvent::Error(format!("{e:#}"))).await;
+        }
+        let _ = tx.send(PipelineEvent::Done).await;
+    });
+
+    let stream = ReceiverStream::new(rx).map(|ev| Ok::<_, Infallible>(event_from(ev)));
+
+    Sse::new(stream)
+        .keep_alive(KeepAlive::new())
+        .into_response()
+}
+
+// ---------------------------------------------------------------------------
+// 启动
+// ---------------------------------------------------------------------------
+
+/// 启动 Web 服务（整个项目的唯一入口）。
+///
+/// 即使用户尚未配置 API Key，服务也会启动——
+/// 用户可以在网页中填入 Key，无需编辑 .env 或重启。
 pub async fn serve(port: u16) {
-    let config = Config::from_env().ok().map(Arc::new);
-    if config.is_none() {
-        tracing::warn!("未配置 API Key，Web 服务仍会启动托管前端页面，但 /api/generate 将返回错误");
+    let state = AppState::new();
+
+    if !state.is_configured() {
+        warn!("尚未配置 API Key，请在网页中填入密钥");
     } else {
         info!("API 配置加载成功");
     }
 
     let static_dir = locate_static_dir().unwrap_or_else(|| {
-        error!("未找到 static 目录，前端页面将无法托管");
+        error!("未找到 static 目录");
         PathBuf::from("static")
     });
 
-    let state = AppState { config };
-
     let app = Router::new()
-        .route("/api/health", get(health))
+        .route("/api/status", get(status_handler))
+        .route("/api/config", post(config_handler))
         .route("/api/generate", post(generate_handler))
         .nest_service("/", ServeDir::new(static_dir))
         .layer(CorsLayer::permissive())
