@@ -5,7 +5,7 @@
 //! 支持任意 OpenAI 兼容的第三方服务商（API2D、OpenRouter、米醋 API 等），
 //! 通过 [`ApiProvider`](crate::config::ApiProvider) 配置 base url、认证方式等。
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
@@ -141,9 +141,13 @@ fn build_request_body(model: &str, image_url: &str) -> ChatRequest {
     }
 }
 
-/// 清理模型返回的 JSON 文本：去除首尾空白与可能的 markdown 代码块包裹。
+/// 清理模型返回的 JSON 文本：去除推理标签与可能的 markdown 代码块包裹。
 fn clean_json_content(s: &str) -> String {
-    let s = s.trim();
+    let s = match s.find("</think>") {
+        Some(end) => &s[end + "</think>".len()..],
+        None => s,
+    }
+    .trim();
     if s.starts_with("```") {
         let s = s
             .trim_start_matches("```json")
@@ -204,15 +208,14 @@ fn parse_face_features(chat_resp: &ChatResponse, model: &str) -> Result<FaceFeat
 // ---------------------------------------------------------------------------
 
 /// 调用指定服务商的视觉模型分析面部特征。
-async fn call_model(
-    provider: &ApiProvider,
-    model: &str,
-    image_url: &str,
-) -> Result<FaceFeatures> {
+async fn call_model(provider: &ApiProvider, model: &str, image_url: &str) -> Result<FaceFeatures> {
     let body = build_request_body(model, image_url);
     let url = provider.chat_url();
 
-    info!("正在向 API 发送分析请求（模型: {}，端点: {}）...", model, url);
+    info!(
+        "正在向 API 发送分析请求（模型: {}，端点: {}）...",
+        model, url
+    );
 
     let resp = provider
         .apply_auth(reqwest::Client::new().post(&url))
@@ -234,12 +237,8 @@ async fn call_model(
 
     info!("{} API 返回成功，正在解析响应", model);
 
-    let chat_resp: ChatResponse = serde_json::from_str(&raw_text).with_context(|| {
-        format!(
-            "解析 {} 的响应 JSON 失败，原始响应: {}",
-            model, raw_text
-        )
-    })?;
+    let chat_resp: ChatResponse = serde_json::from_str(&raw_text)
+        .with_context(|| format!("解析 {} 的响应 JSON 失败，原始响应: {}", model, raw_text))?;
 
     parse_face_features(&chat_resp, model)
 }

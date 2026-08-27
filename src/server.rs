@@ -14,13 +14,16 @@ use axum::{
     Json, Router,
     extract::State,
     http::StatusCode,
-    response::{IntoResponse, Response, sse::{Event, Sse, KeepAlive}},
+    response::{
+        IntoResponse, Response,
+        sse::{Event, KeepAlive, Sse},
+    },
     routing::{get, post},
 };
 use serde::Deserialize;
 use tokio::sync::mpsc;
-use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
+use tokio_stream::wrappers::ReceiverStream;
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tracing::{error, info, warn};
@@ -47,6 +50,14 @@ pub struct ConfigRequest {
     pub api_key: String,
     /// 可选：API 基础地址
     pub api_base: Option<String>,
+    /// 可选：视觉模型名称
+    pub vision_model: Option<String>,
+    /// 可选：图片生成专用 API Key
+    pub image_api_key: Option<String>,
+    /// 可选：图片生成专用 API 基础地址
+    pub image_api_base: Option<String>,
+    /// 可选：图片生成模型名称
+    pub image_model: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -128,7 +139,9 @@ fn event_from(ev: PipelineEvent) -> Event {
         PipelineEvent::Prompt(s) => Event::default().event("prompt").data(s),
         PipelineEvent::Image(u) => {
             // 图片路径规范化：本地文件转 data URL，远程 URL 原样
-            Event::default().event("image").data(normalize_for_browser(&u))
+            Event::default()
+                .event("image")
+                .data(normalize_for_browser(&u))
         }
         PipelineEvent::Error(msg) => Event::default().event("error").data(msg),
         PipelineEvent::Done => Event::default().event("done").data(""),
@@ -153,9 +166,19 @@ fn locate_static_dir() -> Option<PathBuf> {
 }
 
 /// 将 API Key 写入 .env 文件（保留已有内容，仅更新相关行）
-fn write_env_file(api_key: &str, api_base: Option<&str>) -> std::io::Result<()> {
+fn write_env_file(
+    api_key: &str,
+    api_base: Option<&str>,
+    vision_model: Option<&str>,
+    image_api_key: Option<&str>,
+    image_api_base: Option<&str>,
+    image_model: Option<&str>,
+) -> std::io::Result<()> {
     let env_path = PathBuf::from(".env");
     let existing = std::fs::read_to_string(&env_path).unwrap_or_default();
+    let replace_image_key = image_api_key.is_some();
+    let replace_image_base = image_api_base.is_some();
+    let replace_image_model = image_model.is_some();
 
     let mut lines: Vec<String> = existing
         .lines()
@@ -165,6 +188,13 @@ fn write_env_file(api_key: &str, api_base: Option<&str>) -> std::io::Result<()> 
                 && !trimmed.starts_with("API_KEY=")
                 && !trimmed.starts_with("API_BASE_URL=")
                 && !trimmed.starts_with("API_BASE=")
+                && !trimmed.starts_with("VISION_MODEL=")
+                && !trimmed.starts_with("TEXT_MODEL=")
+                && (!replace_image_key || !trimmed.starts_with("IMAGE_API_KEY="))
+                && (!replace_image_base
+                    || (!trimmed.starts_with("IMAGE_API_BASE_URL=")
+                        && !trimmed.starts_with("IMAGE_API_BASE=")))
+                && (!replace_image_model || !trimmed.starts_with("IMAGE_MODEL="))
         })
         .map(String::from)
         .collect();
@@ -174,6 +204,27 @@ fn write_env_file(api_key: &str, api_base: Option<&str>) -> std::io::Result<()> 
     if let Some(base) = api_base {
         if !base.is_empty() {
             lines.insert(1, format!("API_BASE_URL={}", base));
+        }
+    }
+    if let Some(model) = vision_model {
+        if !model.is_empty() {
+            lines.push(format!("VISION_MODEL={}", model));
+            lines.push(format!("TEXT_MODEL={}", model));
+        }
+    }
+    if let Some(key) = image_api_key {
+        if !key.is_empty() {
+            lines.push(format!("IMAGE_API_KEY={}", key));
+        }
+    }
+    if let Some(base) = image_api_base {
+        if !base.is_empty() {
+            lines.push(format!("IMAGE_API_BASE_URL={}", base));
+        }
+    }
+    if let Some(model) = image_model {
+        if !model.is_empty() {
+            lines.push(format!("IMAGE_MODEL={}", model));
         }
     }
 
@@ -198,7 +249,8 @@ async fn status_handler(State(state): State<AppState>) -> impl IntoResponse {
                 "text_model": c.text_model,
                 "image_model": c.image_model,
                 "image_size": c.image_size,
-                "base_url": c.vision.base_url,
+                "vision_base_url": c.vision.base_url,
+                "image_base_url": c.image.base_url,
             }),
         ),
         None => (false, serde_json::Value::Null),
@@ -211,17 +263,42 @@ async fn status_handler(State(state): State<AppState>) -> impl IntoResponse {
 }
 
 /// `POST /api/config` — 在网页中设置 API Key，热更新配置
-async fn config_handler(
-    State(state): State<AppState>,
-    Json(req): Json<ConfigRequest>,
-) -> Response {
+async fn config_handler(State(state): State<AppState>, Json(req): Json<ConfigRequest>) -> Response {
     let api_key = req.api_key.trim();
     if api_key.is_empty() {
         return (StatusCode::BAD_REQUEST, "API Key 不能为空").into_response();
     }
 
+    let vision_model = req
+        .vision_model
+        .as_deref()
+        .map(str::trim)
+        .filter(|model| !model.is_empty());
+    let image_api_key = req
+        .image_api_key
+        .as_deref()
+        .map(str::trim)
+        .filter(|key| !key.is_empty());
+    let image_api_base = req
+        .image_api_base
+        .as_deref()
+        .map(str::trim)
+        .filter(|base| !base.is_empty());
+    let image_model = req
+        .image_model
+        .as_deref()
+        .map(str::trim)
+        .filter(|model| !model.is_empty());
+
     // 1. 写入 .env 文件
-    if let Err(e) = write_env_file(api_key, req.api_base.as_deref()) {
+    if let Err(e) = write_env_file(
+        api_key,
+        req.api_base.as_deref(),
+        vision_model,
+        image_api_key,
+        image_api_base,
+        image_model,
+    ) {
         warn!("写入 .env 失败: {}", e);
         // 文件写入失败不阻止流程，仍可在内存中生效
     } else {
@@ -231,19 +308,26 @@ async fn config_handler(
     // 2. 用新 Key 构造配置
     // 注意：edition 2024 起 set_var 为 unsafe（多线程下修改全局环境有 UB 风险），
     // 这里保持原有行为，用 unsafe 块包裹；运行时仅在配置热更新时调用，影响可控。
-    let config = match req.api_base {
-        Some(ref base) if !base.is_empty() => {
-            unsafe {
-                std::env::set_var("OPENAI_API_KEY", api_key);
-                std::env::set_var("API_BASE_URL", base);
-            }
-            Config::from_env()
+    unsafe {
+        std::env::set_var("OPENAI_API_KEY", api_key);
+        if let Some(base) = req.api_base.as_deref().filter(|base| !base.is_empty()) {
+            std::env::set_var("API_BASE_URL", base);
         }
-        _ => {
-            unsafe { std::env::set_var("OPENAI_API_KEY", api_key) };
-            Config::from_env()
+        if let Some(model) = vision_model {
+            std::env::set_var("VISION_MODEL", model);
+            std::env::set_var("TEXT_MODEL", model);
         }
-    };
+        if let Some(key) = image_api_key {
+            std::env::set_var("IMAGE_API_KEY", key);
+        }
+        if let Some(base) = image_api_base {
+            std::env::set_var("IMAGE_API_BASE_URL", base);
+        }
+        if let Some(model) = image_model {
+            std::env::set_var("IMAGE_MODEL", model);
+        }
+    }
+    let config = Config::from_env();
 
     match config {
         Ok(c) => {
@@ -257,11 +341,7 @@ async fn config_handler(
         }
         Err(e) => {
             error!("配置加载失败: {:#}", e);
-            (
-                StatusCode::BAD_REQUEST,
-                format!("配置无效: {:#}", e),
-            )
-                .into_response()
+            (StatusCode::BAD_REQUEST, format!("配置无效: {:#}", e)).into_response()
         }
     }
 }
@@ -294,10 +374,7 @@ async fn generate_handler(
         }
     };
 
-    info!(
-        "收到生成请求: 姓名={}, 画风={}",
-        req.name, req.style
-    );
+    info!("收到生成请求: 姓名={}, 画风={}", req.name, req.style);
 
     // pipeline 在后台 task 中运行，通过 mpsc channel 推送事件
     let (tx, rx) = mpsc::channel::<PipelineEvent>(64);

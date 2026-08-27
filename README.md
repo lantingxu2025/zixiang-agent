@@ -10,6 +10,8 @@
 - 输入中文姓名，逐字分析笔画、结构、部件和部首。
 - 选择水墨、工笔、油画、赛博朋克、浮世绘或印象派风格。
 - 在网页中配置 API Key 与 API Base URL，不需要手动编辑 `.env`。
+- 在网页中选择图像分析模型：GPT-5.4、GPT-5.4 mini 或 GPT-5.5。
+- 为最后的图片生成单独配置 API Key、Base URL 和模型（支持 `gpt-image-2`、`gpt-image-2-pro`、`gpt-image-1`，也可自定义）。
 - 实时查看真实 Agent 流程：面部分析、姓名解析、构图规划、Prompt 生成和图片生成。
 - 查看面部特征、姓名汉字视觉信息、构图计划、最终 Prompt 和生成图片。
 - 支持 OpenAI 以及兼容 OpenAI Chat Completions 和 Images Generations 接口的服务商。
@@ -91,6 +93,8 @@ http://127.0.0.1:3000
 
 - `API Key`：必填。
 - `API Base URL`：可选，默认使用 `https://api.openai.com/v1`。
+- `图像分析模型`：选择服务商实际可用的视觉模型。
+- `图片生成 API Key`、`图片生成 API Base URL`、`图片生成模型`：最后一步单独使用的图片 API 配置。
 - “保存配置”：将配置提交给本地服务，写入项目根目录 `.env` 并立即热更新。
 
 也可以在启动前手动创建 `.env`：
@@ -108,7 +112,7 @@ OPENAI_API_KEY=sk-your-key
 5. 等待四步真实流程完成。
 6. 查看生成图片，并展开 Prompt、面部分析、姓名解析和构图计划。
 
-页面通过 `POST /api/generate` 接收 SSE 流，因此进度和中间结果都来自后端 Agent，而不是浏览器模拟数据。
+页面通过 `POST /api/generate` 接收 SSE 流，因此进度和中间结果都来自后端 Agent，而不是浏览器模拟数据。面部分析和姓名解析使用前面的文本/视觉配置，最后的图片生成使用独立的图片 API 配置。
 
 ## CLI 使用
 
@@ -147,9 +151,10 @@ Web 服务由 `src/server.rs` 提供：
   "models": {
     "vision_model": "gpt-4o",
     "text_model": "gpt-4o-mini",
-    "image_model": "dall-e-3",
+    "image_model": "gpt-image-2",
     "image_size": "1024x1024",
-    "base_url": "https://api.openai.com/v1"
+    "vision_base_url": "https://api.openai.com/v1",
+    "image_base_url": "https://image.example.com/v1"
   }
 }
 ```
@@ -161,7 +166,11 @@ Web 服务由 `src/server.rs` 提供：
 ```json
 {
   "api_key": "sk-your-key",
-  "api_base": "https://api.openai.com/v1"
+  "api_base": "https://api.openai.com/v1",
+  "vision_model": "gpt-5.4",
+  "image_api_key": "image-api-key",
+  "image_api_base": "https://image.example.com/v1",
+  "image_model": "gpt-image-2.0"
 }
 ```
 
@@ -211,9 +220,26 @@ IMAGE_RESPONSE_FORMAT=auto
 
 VISION_MODEL=gpt-4o
 TEXT_MODEL=gpt-4o-mini
-IMAGE_MODEL=dall-e-3
+IMAGE_MODEL=gpt-image-2
 IMAGE_SIZE=1024x1024
 ```
+
+图片生成模型支持：
+
+| 页面选项 | 模型 ID |
+| --- | --- |
+| GPT Image 2.0 | `gpt-image-2.0` |
+| GPT Image | `gpt-image-1` |
+
+网页输入框保留自定义能力。如果服务商使用不同的模型名称，直接输入对应的模型 ID 即可。
+
+图像分析模型也可以在网页中选择。当前内置选项对应以下模型 ID：
+
+| 页面选项 | `VISION_MODEL` |
+| --- | --- |
+| GPT-5.4 | `gpt-5.4` |
+| GPT-5.4 mini | `gpt-5.4-mini` |
+| GPT-5.5 | `gpt-5.5` |
 
 ### 分端点覆盖
 
@@ -228,7 +254,7 @@ TEXT_MODEL=gpt-4o-mini
 
 IMAGE_API_KEY=sk-image-key
 IMAGE_API_BASE_URL=https://image.example.com/v1
-IMAGE_MODEL=dall-e-3
+IMAGE_MODEL=gpt-image-2
 IMAGE_SIZE=1024x1024
 ```
 

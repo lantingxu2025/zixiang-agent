@@ -90,7 +90,13 @@ impl ApiProvider {
 
     /// 拼接 images generations 端点地址。
     pub fn images_url(&self) -> String {
-        join_url(&self.base_url, "images/generations")
+        // 米醋工具允许填写不带 /v1 的根地址；两种写法都兼容。
+        let base = self.base_url.trim_end_matches('/');
+        if base.ends_with("/v1") {
+            format!("{base}/images/generations")
+        } else {
+            format!("{base}/v1/images/generations")
+        }
     }
 
     /// 将认证信息与额外请求头应用到 [`reqwest::RequestBuilder`]。
@@ -200,7 +206,7 @@ impl Config {
 
         let vision_model = env_or("VISION_MODEL", "gpt-4o");
         let text_model = env_or("TEXT_MODEL", "gpt-4o-mini");
-        let image_model = env_or("IMAGE_MODEL", "dall-e-3");
+        let image_model = env_or("IMAGE_MODEL", "gpt-image-2");
         let image_size = env_or("IMAGE_SIZE", "1024x1024");
 
         Ok(Self {
@@ -223,7 +229,7 @@ impl Config {
             image: ApiProvider::openai(key),
             vision_model: "gpt-4o".to_string(),
             text_model: "gpt-4o-mini".to_string(),
-            image_model: "dall-e-3".to_string(),
+            image_model: "gpt-image-2".to_string(),
             image_size: "1024x1024".to_string(),
         }
     }

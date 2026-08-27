@@ -15,8 +15,8 @@ use tracing::{error, info};
 
 use crate::config::{ApiProvider, ImageResponseFormat};
 
-/// 默认图片生成模型（standalone 入口使用）
-const DEFAULT_MODEL: &str = "dall-e-3";
+/// 默认图片生成模型（米醋 gpt-image2 工具使用的模型 ID）
+const DEFAULT_MODEL: &str = "gpt-image-2";
 
 // ---------------------------------------------------------------------------
 // 请求 / 响应结构体

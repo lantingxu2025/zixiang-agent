@@ -6,7 +6,7 @@
 //! 支持任意 OpenAI 兼容的第三方服务商（API2D、OpenRouter 等），
 //! 通过 [`ApiProvider`](crate::config::ApiProvider) 配置。
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, warn};
 
@@ -100,9 +100,13 @@ fn build_prompt(character: &str) -> String {
     )
 }
 
-/// 清理模型返回的 JSON 文本：去除首尾空白与可能的 markdown 代码块包裹。
+/// 清理模型返回的 JSON 文本：去除推理标签与可能的 markdown 代码块包裹。
 fn clean_json_content(s: &str) -> String {
-    let s = s.trim();
+    let s = match s.find("</think>") {
+        Some(end) => &s[end + "</think>".len()..],
+        None => s,
+    }
+    .trim();
     if s.starts_with("```") {
         let s = s
             .trim_start_matches("```json")
@@ -161,7 +165,9 @@ fn parse_character_visual(chat_resp: &ChatResponse, character: &str) -> Result<C
     if !result.strokes.is_empty() && result.stroke_count as usize != result.strokes.len() {
         warn!(
             "汉字 {} 的 stroke_count ({}) 与 strokes.len() ({}) 不一致，以 strokes 为准",
-            result.character, result.stroke_count, result.strokes.len()
+            result.character,
+            result.stroke_count,
+            result.strokes.len()
         );
         result.stroke_count = result.strokes.len() as u8;
     }
@@ -190,7 +196,12 @@ async fn analyze_character_impl(
     }
     let ch = chars[0];
 
-    info!("开始分析汉字: {}（模型: {}，端点: {}）", ch, model, provider.chat_url());
+    info!(
+        "开始分析汉字: {}（模型: {}，端点: {}）",
+        ch,
+        model,
+        provider.chat_url()
+    );
 
     let body = ChatRequest {
         model: model.to_string(),
@@ -231,12 +242,8 @@ async fn analyze_character_impl(
 
     info!("汉字 {} API 返回成功，正在解析响应", ch);
 
-    let chat_resp: ChatResponse = serde_json::from_str(&raw_text).with_context(|| {
-        format!(
-            "解析汉字 {} 的响应 JSON 失败，原始响应: {}",
-            ch, raw_text
-        )
-    })?;
+    let chat_resp: ChatResponse = serde_json::from_str(&raw_text)
+        .with_context(|| format!("解析汉字 {} 的响应 JSON 失败，原始响应: {}", ch, raw_text))?;
 
     parse_character_visual(&chat_resp, &ch.to_string())
 }
